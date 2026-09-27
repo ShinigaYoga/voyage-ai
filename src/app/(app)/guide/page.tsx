@@ -21,6 +21,7 @@ const QUICK_PROMPTS = [
 // Simple in-memory message type for the guide (not persisted in IndexedDB)
 interface GuideMessage {
   id: string;
+  tripId?: string;
   role: "user" | "assistant";
   type: "text" | "attraction" | "restaurant" | "weather";
   content?: string;
@@ -35,7 +36,7 @@ function generateId() {
   return Math.random().toString(36).substring(2, 15);
 }
 
-function GuideChatBubble({ msg }: { msg: GuideMessage }) {
+function GuideChatBubble({ msg, tripId }: { msg: GuideMessage; tripId?: string }) {
   const isUser = msg.role === "user";
   const timeString = new Date(msg.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
@@ -46,7 +47,7 @@ function GuideChatBubble({ msg }: { msg: GuideMessage }) {
   const asMessage = (() => {
     const base = {
       id: msg.id,
-      tripId: "__guide__",
+      tripId: msg.tripId || tripId || "__guide__",
       role: msg.role,
       createdAt: msg.createdAt,
     };
@@ -266,6 +267,7 @@ function GuidePageContent() {
                     ...prev,
                     {
                       id: generateId(),
+                      tripId: tripId || undefined,
                       role: "assistant",
                       type: "attraction",
                       attractions: newAttractions,
@@ -282,6 +284,7 @@ function GuidePageContent() {
                     ...prev,
                     {
                       id: generateId(),
+                      tripId: tripId || undefined,
                       role: "assistant",
                       type: "restaurant",
                       restaurants: newRestaurants,
@@ -414,7 +417,7 @@ function GuidePageContent() {
 
         {/* Messages */}
         {messages.map((msg) => (
-          <GuideChatBubble key={msg.id} msg={msg} />
+          <GuideChatBubble key={msg.id} msg={msg} tripId={tripId || undefined} />
         ))}
 
         {loading && <LoadingBubble />}
