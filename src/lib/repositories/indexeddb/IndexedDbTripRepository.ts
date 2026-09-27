@@ -36,7 +36,21 @@ export class IndexedDbTripRepository implements TripRepository {
   async update(id: string, patch: Partial<Trip>): Promise<Trip> {
     const db = await getDB();
     const trip = await this.get(id);
-    if (!trip) throw new Error("Trip not found");
+
+    if (!trip) {
+      const fallbackTrip: Trip = {
+        id,
+        name: "Untitled trip",
+        destination: "Unknown",
+        travelers: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        ...patch,
+      } as Trip;
+
+      if (db) await db.put("trips", fallbackTrip);
+      return fallbackTrip;
+    }
 
     const updatedTrip: Trip = {
       ...trip,

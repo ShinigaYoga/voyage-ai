@@ -27,13 +27,16 @@ export class IndexedDbMessageRepository implements MessageRepository {
     
     if (db) {
       await db.put("messages", newMessage);
-      
-      if (message.tripId) {
+
+      if (message.tripId && !message.tripId.startsWith("__")) {
         const tripRepo = new IndexedDbTripRepository();
         try {
-          await tripRepo.update(message.tripId, {});
+          const trip = await tripRepo.get(message.tripId);
+          if (trip) {
+            await tripRepo.update(message.tripId, {});
+          }
         } catch (e) {
-          console.error("Failed to update trip timestamp", e);
+          console.warn("[MessageRepo] Skipped trip timestamp refresh for stale trip id", message.tripId, e);
         }
       }
     }
