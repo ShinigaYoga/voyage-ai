@@ -9,12 +9,12 @@ export const GEMINI_MODEL = "gemini-3.6-flash";
 
 function hasValidGeminiKey(value?: string): boolean {
   const key = value?.trim();
-  return !!key && key !== "your_gemini_api_key_here" && key.startsWith("AIza");
+  return !!key && key !== "your_gemini_api_key_here" && key !== "your_groq_api_key_here";
 }
 
 function hasValidGroqKey(value?: string): boolean {
   const key = value?.trim();
-  return !!key && key.startsWith("gsk_");
+  return !!key && key !== "your_groq_api_key_here" && key !== "your_gemini_api_key_here";
 }
 
 export function getAIProvider(): AIProvider {
