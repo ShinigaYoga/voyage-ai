@@ -58,7 +58,7 @@ export const compareTransportTool: ToolDefinition = {
         priceDifferenceRupees: priceDelta,
         timeDifferenceMinutes: timeDeltaMinutes,
         timeDifferenceFormatted: timeDeltaFormatted,
-        summary: `${fastest.provider} (${fastest.mode}) is faster by ${timeDeltaFormatted} but costs ₹${priceDelta} more than ${cheapest.provider} (${cheapest.mode}).`,
+        summary: `${fastest.provider || fastest.mode} (${fastest.mode}) is faster by ${timeDeltaFormatted} but costs ₹${priceDelta} more than ${cheapest.provider || cheapest.mode} (${cheapest.mode}).`,
       },
       artifact: {
         type: "transport",

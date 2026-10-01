@@ -13,6 +13,24 @@ import { IndexedDbTripRepository } from "@/lib/repositories/indexeddb/IndexedDbT
 import { IndexedDbMessageRepository } from "@/lib/repositories/indexeddb/IndexedDbMessageRepository";
 import { Trip, Message, MessageType } from "@/lib/types";
 
+interface FailedChatRequest {
+  text: string;
+  attachments?: { url: string; name: string; type: string }[];
+  userMessageId: string;
+  assistantMessageId: string;
+}
+
+class ChatRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly retryable: boolean
+  ) {
+    super(message);
+    this.name = "ChatRequestError";
+  }
+}
+
 function ChatPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,6 +43,7 @@ function ChatPageContent() {
   const [loading, setLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Understanding your trip...");
   const [initialized, setInitialized] = useState(false);
+  const [failedRequest, setFailedRequest] = useState<FailedChatRequest | null>(null);
 
   // Drawer & Popover state
   const [isNotesOpen, setIsNotesOpen] = useState(false);
@@ -143,7 +162,11 @@ function ChatPageContent() {
     }
   };
 
-  const handleSend = useCallback(async (rawText: string, attachments?: { url: string; name: string; type: string }[]) => {
+  const handleSend = useCallback(async (
+    rawText: string,
+    attachments?: { url: string; name: string; type: string }[],
+    retry?: Pick<FailedChatRequest, "userMessageId" | "assistantMessageId">
+  ) => {
     const text = rawText.trim();
 
     // Guard 1: empty text/no attachments
@@ -165,52 +188,69 @@ function ChatPageContent() {
     const tripIdForMsg = activeTripId || "__pending__";
 
     let userMsg: Message;
-    try {
-      userMsg = await msgRepo.create({
-        tripId: tripIdForMsg,
-        role: "user" as const,
-        type: "text" as const,
-        content: text,
-        ...(attachments && attachments.length > 0 ? { attachments } : {})
-      });
-    } catch (dbErr) {
-      console.error("[ChatPage] Failed to persist user message", dbErr);
-      isSendingRef.current = false;
-      setLoading(false);
-      return;
+    if (retry) {
+      const existing = messages.find(message => message.id === retry.userMessageId);
+      if (!existing) {
+        isSendingRef.current = false;
+        setLoading(false);
+        return;
+      }
+      userMsg = existing;
+      setMessages(previous => previous.filter(message => message.id !== retry.assistantMessageId));
+      setFailedRequest(null);
+    } else {
+      try {
+        userMsg = await msgRepo.create({
+          tripId: tripIdForMsg,
+          role: "user" as const,
+          type: "text" as const,
+          content: text,
+          ...(attachments && attachments.length > 0 ? { attachments } : {})
+        });
+      } catch (dbErr) {
+        console.error("[ChatPage] Failed to persist user message", dbErr);
+        isSendingRef.current = false;
+        setLoading(false);
+        return;
+      }
+
+      setMessages((prev) => [...prev, userMsg]);
     }
 
-    // 2. Append user message to UI
-    setMessages((prev) => [...prev, userMsg]);
-
+    const requestController = new AbortController();
+    const requestTimeoutId = setTimeout(() => requestController.abort(), 65_000);
     try {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: requestController.signal,
         body: JSON.stringify({
           tripId: activeTripId,
           message: text,
           attachments: attachments,
           // Send full trip object so server can seed its memory on cold starts
           tripData: currentTrip || undefined,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           // Send history snapshot (does NOT include the new userMsg — server adds it)
-          history: messages,
+          history: messages.filter(message =>
+            message.id !== userMsg.id && message.id !== retry?.assistantMessageId
+          ),
         }),
       });
 
-      if (!res.ok) {
-        throw new Error(`Server returned ${res.status}`);
-      }
-
       const data = await res.json();
-
-      if (data.error) {
-        const errText = data.error.includes("429")
-          ? "AI is busy, try again in a moment."
-          : `AI Error: ${data.error}`;
-        const errMsg = await appendAssistantText(tripIdForMsg, errText);
-        setMessages((prev) => [...prev, errMsg]);
-      } else {
+      if (!res.ok || data.error) {
+        const apiError = typeof data.error === "object" && data.error
+          ? data.error
+          : { code: "AGENT_REQUEST_FAILED", message: String(data.error || `Server returned ${res.status}`), retryable: true };
+        throw new ChatRequestError(
+          apiError.message || "I couldn't complete that request. Please try again.",
+          apiError.code || "AGENT_REQUEST_FAILED",
+          Boolean(apiError.retryable)
+        );
+      }
+      setFailedRequest(null);
+      {
         // Handle trip state updates from agent
         let resolvedTripId = tripIdForMsg;
 
@@ -302,11 +342,29 @@ function ChatPageContent() {
                 destination: artifact.destination,
               });
               setMessages((prev) => [...prev, transportMsg]);
+            } else if (artifact.type === "unified_transport" && artifact.options) {
+              const transportMsg = await msgRepo.create({
+                tripId: resolvedTripId,
+                role: "assistant" as const,
+                type: "unified_transport" as const,
+                origin: artifact.origin,
+                destination: artifact.destination,
+                departureDate: artifact.departureDate,
+                returnDate: artifact.returnDate,
+                today: artifact.today,
+                daysToGo: artifact.daysToGo,
+                bookingAdvice: artifact.bookingAdvice,
+                source: artifact.source,
+                plans: artifact.plans || [],
+                options: artifact.options,
+              });
+              setMessages((prev) => [...prev, transportMsg]);
             } else if (artifact.type === "hotel" && artifact.hotels) {
               const hotelMsg = await msgRepo.create({
                 tripId: resolvedTripId,
                 role: "assistant" as const,
                 type: "hotel" as const,
+                destination: artifact.destination || currentTrip?.destination || data.trip?.destination || "",
                 hotels: artifact.hotels,
               });
               setMessages((prev) => [...prev, hotelMsg]);
@@ -350,9 +408,29 @@ function ChatPageContent() {
       }
     } catch (err: unknown) {
       console.error("[ChatPage] Failed to reach agent API", err);
-      const fallbackMsg = await appendAssistantText(tripIdForMsg, "Couldn't reach the AI. Check your connection.");
-      setMessages((prev) => [...prev, fallbackMsg]);
+      const failure = err instanceof ChatRequestError
+        ? err
+        : requestController.signal.aborted
+          ? new ChatRequestError("The request timed out. Please retry.", "REQUEST_TIMEOUT", true)
+          : new ChatRequestError("Couldn't reach the AI. Check your connection and retry.", "NETWORK_ERROR", true);
+      const assistantMessageId = `failed_${Date.now()}`;
+      const failedMessage: Message = {
+        id: assistantMessageId,
+        tripId: tripIdForMsg,
+        role: "assistant",
+        type: "text",
+        content: failure.message,
+        createdAt: Date.now(),
+      };
+      setMessages(previous => [...previous, failedMessage]);
+      setFailedRequest({
+        text,
+        attachments,
+        userMessageId: userMsg.id,
+        assistantMessageId,
+      });
     } finally {
+      clearTimeout(requestTimeoutId);
       setLoading(false);
       isSendingRef.current = false;
     }
@@ -480,6 +558,22 @@ function ChatPageContent() {
         currentTrip={currentTrip}
         initialized={initialized}
       />
+      {failedRequest && (
+        <div
+          role="alert"
+          className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-xl border border-coral-200 bg-coral-50 px-4 py-3 text-sm text-coral-900"
+        >
+          <span>The last message wasn't completed.</span>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => handleSend(failedRequest.text, failedRequest.attachments, failedRequest)}
+            className="shrink-0 rounded-lg bg-sage-800 px-3 py-1.5 font-bold text-white hover:bg-sage-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-800 disabled:opacity-50"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Input Area */}
       <div className="sticky bottom-0 z-10 w-full">

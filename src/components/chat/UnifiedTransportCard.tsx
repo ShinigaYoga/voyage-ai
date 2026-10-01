@@ -68,7 +68,7 @@ export function UnifiedTransportCard({ origin, destination, departureDate, plans
     try {
       const params = new URLSearchParams({
         mode: option.mode,
-        provider: option.provider,
+        provider: option.provider || "",
         departure: option.departureCity,
         arrival: option.arrivalCity,
         depTime: option.departureTime,

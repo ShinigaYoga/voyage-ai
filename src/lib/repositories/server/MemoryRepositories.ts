@@ -62,7 +62,7 @@ export class ServerTripRepository implements TripRepository {
     return upserted;
   }
 
-  async delete(id: string): Promise<void> {
+  async deleteTrip(id: string): Promise<void> {
     memoryTrips.delete(id);
     memoryMessages.delete(id);
   }

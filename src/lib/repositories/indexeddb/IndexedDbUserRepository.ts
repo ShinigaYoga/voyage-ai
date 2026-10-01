@@ -27,6 +27,9 @@ export class IndexedDbUserRepository {
     if (db) {
       await db.put("user_profile", updated);
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("profile-updated", { detail: updated }));
+    }
     return updated;
   }
 
@@ -37,7 +40,7 @@ export class IndexedDbUserRepository {
   private getDefaultProfile(): UserProfile {
     return {
       id: DEFAULT_USER_ID,
-      name: "Traveler",
+      name: "",
       bio: "I love exploring new places and trying local cuisines.",
       currency: "USD",
       defaultTravelers: 2,

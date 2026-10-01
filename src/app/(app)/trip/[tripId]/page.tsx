@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Trip, Activity } from "@/lib/types";
+import { Trip, Activity, ChecklistItem } from "@/lib/types";
 import { getDestinationProfile } from "@/lib/itinerary/destinations";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BudgetCard } from "@/components/trip/BudgetCard";
@@ -13,12 +13,29 @@ import { calculateBudgetBreakdown } from "@/lib/budget/engine";
 import { TripMap } from "@/components/trip/TripMap";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button } from "@/components/ui/Button";
-import { Share2, MessageSquare, Compass } from "lucide-react";
+import { Share2, MessageSquare, Compass, Plus, Trash2 } from "lucide-react";
 import { useWeather } from "@/lib/hooks/useWeather";
 import { useToast } from "@/lib/hooks/useToast";
 
 import { IndexedDbTripRepository } from "@/lib/repositories/indexeddb/IndexedDbTripRepository";
 import { resolveOriginCoords } from "@/lib/itinerary/coordinateUtils";
+
+function getTripChecklist(trip: Trip): ChecklistItem[] {
+  if (trip.checklist) return trip.checklist;
+  return (trip.notes || "")
+    .split(/\r?\n/)
+    .map((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+      const marker = trimmed.match(/^(?:[-*]\s*)?(?:\[([ xX])\]|([☑✓]))\s*/);
+      return {
+        id: `legacy-${index}`,
+        text: trimmed.replace(/^(?:[-*]\s*)?(?:\[[ xX]\]|[☐☑✓])\s*/, "").trim(),
+        completed: marker ? Boolean(marker[1]?.trim() || marker[2]) : false,
+      };
+    })
+    .filter((item): item is ChecklistItem => Boolean(item?.text));
+}
 
 function TripDashboard() {
   const { tripId } = useParams();
@@ -29,7 +46,8 @@ function TripDashboard() {
   const [loading, setLoading] = useState(true);
   const tabFromUrl = (searchParams.get('tab') as 'itinerary' | 'map' | 'bookings' | 'notes') || 'itinerary';
   const [activeTab, setActiveTab] = useState<'itinerary' | 'map' | 'bookings' | 'notes'>(tabFromUrl);
-  const [notes, setNotes] = useState("");
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [newChecklistItem, setNewChecklistItem] = useState("");
   const [dismissedRainDays, setDismissedRainDays] = useState<number[]>([]);
   const [replanningDay, setReplanningDay] = useState<number | null>(null);
 
@@ -47,7 +65,7 @@ function TripDashboard() {
       const id = typeof tripId === "string" ? tripId : tripId[0];
       if (incoming.id !== id) return;
       setTrip(prev => ({ ...prev, ...incoming, budgetBreakdown: incoming.budgetBreakdown || calculateBudgetBreakdown(incoming) } as Trip));
-      setNotes(incoming.notes || "");
+      setChecklist(getTripChecklist(incoming));
     };
 
     const syncFromStorage = (event: StorageEvent) => {
@@ -60,7 +78,7 @@ function TripDashboard() {
         const payload = event.newValue ? JSON.parse(event.newValue) : null;
         if (!payload?.trip) return;
         setTrip(prev => ({ ...prev, ...payload.trip, budgetBreakdown: payload.trip.budgetBreakdown || calculateBudgetBreakdown(payload.trip) } as Trip));
-        setNotes(payload.trip.notes || "");
+        setChecklist(getTripChecklist(payload.trip));
       } catch {}
     };
 
@@ -85,7 +103,7 @@ function TripDashboard() {
             budgetBreakdown: localTrip.budgetBreakdown || calculateBudgetBreakdown(localTrip),
           };
           setTrip(withBreakdown);
-          setNotes(localTrip.notes || "");
+          setChecklist(getTripChecklist(localTrip));
           localStorage.setItem("lastOpenedTripId", localTrip.id);
           localStorage.setItem("lastOpenedTripName", localTrip.name);
           console.log("[TripDetailPage] mount effect done (loaded local)");
@@ -120,6 +138,9 @@ function TripDashboard() {
                 if (localFresh.transport && !serverTrip.transport) {
                   serverTrip.transport = localFresh.transport;
                 }
+                if (localFresh.checklist) {
+                  serverTrip.checklist = localFresh.checklist;
+                }
               }
             } catch {
               // Ignore local freshness merge failures and fall back to server data.
@@ -129,7 +150,7 @@ function TripDashboard() {
               budgetBreakdown: serverTrip.budgetBreakdown || calculateBudgetBreakdown(serverTrip),
             };
             setTrip(withBreakdown);
-            setNotes(serverTrip.notes || "");
+            setChecklist(getTripChecklist(serverTrip));
             localStorage.setItem("lastOpenedTripId", serverTrip.id);
             localStorage.setItem("lastOpenedTripName", serverTrip.name);
           }
@@ -160,22 +181,41 @@ function TripDashboard() {
     }).catch(err => console.warn("[sync] failed", err));
   };
 
-  const handleNotesChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newNotes = e.target.value;
-    setNotes(newNotes);
+  const saveChecklist = async (nextChecklist: ChecklistItem[]) => {
     if (!trip) return;
 
-    const updated = { ...trip, notes: newNotes };
+    const updated = { ...trip, checklist: nextChecklist };
+    setChecklist(nextChecklist);
     setTrip(updated);
 
-    const localRepo = new IndexedDbTripRepository();
-    localRepo.update(trip.id, { notes: newNotes }).catch(() => {});
+    try {
+      await persistTrip(updated);
+    } catch (error) {
+      console.error("[checklist] failed to save", error);
+      showToast("Could not save checklist. Please try again.");
+    }
+  };
 
-    fetch('/api/trips/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trip: updated }),
-    }).catch(err => console.warn("[notes sync] failed", err));
+  const addChecklistItem = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = newChecklistItem.trim();
+    if (!text || !trip) return;
+
+    setNewChecklistItem("");
+    await saveChecklist([
+      ...checklist,
+      { id: `checklist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, text, completed: false },
+    ]);
+  };
+
+  const toggleChecklistItem = (itemId: string) => {
+    void saveChecklist(checklist.map(item =>
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  const deleteChecklistItem = (itemId: string) => {
+    void saveChecklist(checklist.filter(item => item.id !== itemId));
   };
 
   const handleSetBudget = async (newBudget: number) => {
@@ -486,7 +526,7 @@ function TripDashboard() {
                   activeTab === tab ? 'text-ink-900' : 'text-ink-400 hover:text-ink-700'
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === "notes" ? "Checklist" : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-ink-900 rounded-t-full" />
                 )}
@@ -583,7 +623,7 @@ function TripDashboard() {
                 ) : (
                   <div className="grid gap-4">
                     {trip.bookings.map((booking: NonNullable<Trip["bookings"]>[number]) => {
-                      const isTransport = ['flight', 'train', 'bus'].includes(booking.itemType);
+                      const isTransport = booking.type === 'transport' || ['flight', 'train', 'bus'].includes(booking.itemType);
                       const demo = typeof booking.message === 'string' && booking.message.toLowerCase().includes('prototype');
                       const operator = booking.details?.operator || booking.details?.provider || booking.details?.carrier;
                       const origin = booking.details?.origin || booking.details?.from;
@@ -591,13 +631,16 @@ function TripDashboard() {
                       const departure = booking.details?.departureDateTime || booking.details?.departureTime || booking.details?.departure;
                       const arrival = booking.details?.arrivalDateTime || booking.details?.arrivalTime || booking.details?.arrival;
                       const passengers = booking.details?.passengers || booking.details?.passengerCount || booking.details?.pax;
+                      const bookingDates = booking.type === 'hotel'
+                        ? [booking.dates?.checkIn || booking.details?.checkIn, booking.dates?.checkOut || booking.details?.checkOut].filter(Boolean).join(' – ')
+                        : booking.dates?.travelDate || booking.details?.travelDate || booking.details?.departureTime;
 
                       return (
                         <div key={booking.id} className="bg-white p-4 rounded-xl shadow-sm border border-cream-200 flex flex-col md:flex-row justify-between gap-4">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-bold uppercase tracking-wider text-ink-500">
-                                {booking.itemType === 'flight' ? '✈️ Flight' : booking.itemType === 'train' ? '🚆 Train' : booking.itemType === 'bus' ? '🚌 Bus' : isTransport ? 'Transport' : booking.itemType}
+                                {booking.type === 'hotel' ? '🏨 Hotel' : booking.itemType === 'flight' ? '✈️ Flight' : booking.itemType === 'train' ? '🚆 Train' : booking.itemType === 'bus' ? '🚌 Bus' : isTransport ? '🚆 Transport' : booking.itemType}
                               </span>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase
                                 ${booking.status === 'confirmed' ? 'bg-sage-100 text-sage-700' : 
@@ -610,7 +653,14 @@ function TripDashboard() {
                               )}
                             </div>
 
-                            <div className="font-bold text-ink-900 text-lg">{booking.details?.itemName || booking.itemId}</div>
+                            <div className="font-bold text-ink-900 text-lg">
+                              {booking.details?.itemName || (typeof booking.itemSnapshot?.name === 'string' ? booking.itemSnapshot.name : booking.itemId)}
+                            </div>
+                            {bookingDates && (
+                              <div className="text-sm text-ink-600 mt-1">
+                                {booking.type === 'hotel' ? 'Stay: ' : 'Date: '}{bookingDates}
+                              </div>
+                            )}
 
                             {isTransport ? (
                               <div className="text-sm text-ink-700 mt-2 space-y-1">
@@ -651,14 +701,63 @@ function TripDashboard() {
             )}
 
             {activeTab === 'notes' && (
-              <div className="bg-cream-50  rounded-cardLg p-4 shadow-sm border border-cream-200 h-100">
-                <textarea
-                  className="w-full h-full resize-none outline-none text-ink-700 leading-relaxed bg-transparent"
-                  placeholder="Jot down packing lists, ideas, or reminders here..."
-                  value={notes}
-                  onChange={handleNotesChange}
-                />
-              </div>
+              <section className="bg-cream-50 rounded-cardLg p-4 sm:p-5 shadow-sm border border-cream-200">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <div>
+                    <h2 className="font-display font-bold text-ink-900">Trip Checklist</h2>
+                    <p className="text-xs text-ink-500 mt-1">
+                      {checklist.filter(item => item.completed).length} of {checklist.length} completed
+                    </p>
+                  </div>
+                </div>
+                <form onSubmit={addChecklistItem} className="flex gap-2 mb-4">
+                  <input
+                    type="text"
+                    value={newChecklistItem}
+                    onChange={event => setNewChecklistItem(event.target.value)}
+                    placeholder="Add something to remember..."
+                    aria-label="New checklist item"
+                    className="min-w-0 flex-1 rounded-xl border border-cream-200 bg-white px-3 py-2.5 text-sm text-ink-700 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-sage-300"
+                  />
+                  <Button type="submit" disabled={!newChecklistItem.trim()} className="shrink-0 gap-1.5">
+                    <Plus size={16} />
+                    Add
+                  </Button>
+                </form>
+                {checklist.length > 0 ? (
+                  <ul className="space-y-2">
+                    {checklist.map(item => (
+                      <li
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-xl border border-cream-200 bg-white px-3 py-2.5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={item.completed}
+                          onChange={() => toggleChecklistItem(item.id)}
+                          aria-label={`${item.completed ? "Mark incomplete" : "Mark complete"}: ${item.text}`}
+                          className="h-4 w-4 shrink-0 accent-sage-600"
+                        />
+                        <span className={`min-w-0 flex-1 break-words text-sm ${item.completed ? "text-ink-400 line-through" : "text-ink-700"}`}>
+                          {item.text}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => deleteChecklistItem(item.id)}
+                          aria-label={`Delete ${item.text}`}
+                          className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-coral-50 hover:text-coral-600"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-cream-300 px-3 py-6 text-center text-sm text-ink-400">
+                    Your checklist is empty. Add a reminder to get started.
+                  </p>
+                )}
+              </section>
             )}
           </div>
         </div>

@@ -10,6 +10,8 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+const searchCache = new Map<string, TransportOption[]>();
+
 export class EstimateTransportProvider implements TransportService {
   async search(params: TransportSearchParams): Promise<TransportOption[]> {
     const origin = (params.origin || "Origin").trim();
@@ -17,6 +19,13 @@ export class EstimateTransportProvider implements TransportService {
     const dateStr = params.date ? `-${params.date}` : "";
     const key = `${origin.toLowerCase()}->${destination.toLowerCase()}${dateStr}`;
     const baseKey = `${origin.toLowerCase()}->${destination.toLowerCase()}`;
+    const cacheKey = JSON.stringify([
+      key,
+      params.passengers || 1,
+      [...(params.preferredModes || [])].sort(),
+    ]);
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached.map(option => ({ ...option, priceRange: option.priceRange && { ...option.priceRange } }));
 
     // Deterministic using hash
     const seed = hashString(baseKey);
@@ -40,7 +49,6 @@ export class EstimateTransportProvider implements TransportService {
       results.push({
         id: `fl_gen_${seed}_1`,
         mode: "flight",
-        provider: "Flight Air",
         departureCity: origin,
         arrivalCity: destination,
         departureTime: "07:30",
@@ -54,7 +62,6 @@ export class EstimateTransportProvider implements TransportService {
       results.push({
         id: `fl_gen_${seed}_2`,
         mode: "flight",
-        provider: "Air Connect",
         departureCity: origin,
         arrivalCity: destination,
         departureTime: "14:15",
@@ -70,7 +77,6 @@ export class EstimateTransportProvider implements TransportService {
       results.push({
         id: `tr_gen_${seed}_1`,
         mode: "train",
-        provider: "Express Train",
         departureCity: origin,
         arrivalCity: destination,
         departureTime: "16:20",
@@ -86,7 +92,6 @@ export class EstimateTransportProvider implements TransportService {
       results.push({
         id: `bs_gen_${seed}_1`,
         mode: "bus",
-        provider: "AC Sleeper Bus",
         departureCity: origin,
         arrivalCity: destination,
         departureTime: "21:00",
@@ -99,7 +104,7 @@ export class EstimateTransportProvider implements TransportService {
     }
 
     // Apply fluctuations based on date
-    return results.map(opt => {
+    const pricedResults = results.map(opt => {
       const fluctuation = ((dateSeed % 50) - 20) / 100; 
       const adjustedPrice = Math.round(opt.price * (1 + fluctuation));
       
@@ -112,9 +117,15 @@ export class EstimateTransportProvider implements TransportService {
         ...opt,
         id: `${opt.id}_${dateStr}`, // unique ID per date
         price: adjustedPrice,
+        priceRange: {
+          min: Math.round(adjustedPrice * 0.9),
+          max: Math.round(adjustedPrice * 1.1),
+        },
         availability,
         isEstimate: true // Flag as estimated data
       } as TransportOption & { isEstimate?: boolean };
     });
+    searchCache.set(cacheKey, pricedResults.map(option => ({ ...option })));
+    return pricedResults;
   }
 }

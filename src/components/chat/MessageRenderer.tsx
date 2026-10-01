@@ -1,4 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
 "use client";
+
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,28 +16,99 @@ import { ImageWithFallback } from "../ui/ImageWithFallback";
 import { isGeneratedImageUrl } from "@/lib/images/activityImage";
 import { PlaceImage } from "../ui/PlaceImage";
 import { usePlaceImages } from "@/lib/hooks/usePlaceImages";
+import { createBookingDraft } from "@/lib/services/booking/bookingDraftStore";
 
 import ReactMarkdown from 'react-markdown';
-import { UnifiedTransportCard } from "./UnifiedTransportCard";
+import { TransportResultsCard } from "./TransportResultsCard";
+
+type MarkdownBlock =
+  | { type: "text"; content: string }
+  | { type: "table"; headers: string[]; rows: string[][] };
+
+function tableCells(row: string): string[] {
+  return row.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+}
+
+function isTableSeparator(row: string): boolean {
+  if (!row.includes("|")) return false;
+  const cells = tableCells(row);
+  return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
+}
+
+function parseMarkdownBlocks(content: string): MarkdownBlock[] {
+  const lines = content.split("\n");
+  const blocks: MarkdownBlock[] = [];
+  let text: string[] = [];
+  const flushText = () => {
+    const value = text.join("\n").trim();
+    if (value) blocks.push({ type: "text", content: value });
+    text = [];
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.includes("|") && lines[index + 1]?.includes("|") && isTableSeparator(lines[index + 1])) {
+      flushText();
+      const headers = tableCells(line);
+      const rows: string[][] = [];
+      index += 2;
+      while (index < lines.length && lines[index].includes("|")) {
+        rows.push(tableCells(lines[index]));
+        index += 1;
+      }
+      index -= 1;
+      blocks.push({ type: "table", headers, rows });
+    } else if (!isTableSeparator(line)) {
+      text.push(line);
+    }
+  }
+  flushText();
+  return blocks;
+}
+
+function MarkdownTableCard({ headers, rows }: { headers: string[]; rows: string[][] }) {
+  return (
+    <div className="my-2 space-y-2">
+      {rows.map((row, rowIndex) => (
+        <div key={rowIndex} className="rounded-xl border border-cream-200 bg-white p-3 shadow-soft">
+          {row.map((value, cellIndex) => value && (
+            <div key={cellIndex} className="flex flex-wrap gap-x-2 text-xs leading-relaxed">
+              <strong className="text-ink-900">{headers[cellIndex] || `Item ${cellIndex + 1}`}:</strong>
+              <span className="text-ink-700">{value}</span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function TextMessageRenderer({ message }: { message: TextMessage }) {
+  const blocks = message.role === "assistant"
+    ? parseMarkdownBlocks(message.content)
+    : [{ type: "text" as const, content: message.content }];
   return (
     <div className="leading-relaxed flex flex-col gap-2 max-w-none">
-      <ReactMarkdown
-        components={{
-          h1: ({node, ...props}) => <h1 className="font-display font-bold text-xl my-2" {...props} />,
-          h2: ({node, ...props}) => <h2 className="font-display font-bold text-lg my-2" {...props} />,
-          h3: ({node, ...props}) => <h3 className="font-display font-bold text-base my-1" {...props} />,
-          p: ({node, ...props}) => <p className="my-1" {...props} />,
-          ul: ({node, ...props}) => <ul className="list-disc pl-5 my-1 space-y-1" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal pl-5 my-1 space-y-1" {...props} />,
-          li: ({node, ...props}) => <li className="" {...props} />,
-          a: ({node, ...props}) => <a className="text-sage-600 hover:underline" {...props} />,
-          strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
-        }}
-      >
-        {message.content}
-      </ReactMarkdown>
+      {blocks.map((block, index) => block.type === "table" ? (
+        <MarkdownTableCard key={index} headers={block.headers} rows={block.rows} />
+      ) : (
+        <ReactMarkdown
+          key={index}
+          components={{
+            h1: ({node, ...props}) => <h1 className="font-display font-bold text-xl my-2" {...props} />,
+            h2: ({node, ...props}) => <h2 className="font-display font-bold text-lg my-2" {...props} />,
+            h3: ({node, ...props}) => <h3 className="font-display font-bold text-base my-1" {...props} />,
+            p: ({node, ...props}) => <p className="my-1" {...props} />,
+            ul: ({node, ...props}) => <ul className="list-disc pl-5 my-1 space-y-1" {...props} />,
+            ol: ({node, ...props}) => <ol className="list-decimal pl-5 my-1 space-y-1" {...props} />,
+            li: ({node, ...props}) => <li className="" {...props} />,
+            a: ({node, ...props}) => <a className="text-sage-600 hover:underline" {...props} />,
+            strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
+          }}
+        >
+          {block.content}
+        </ReactMarkdown>
+      ))}
           {message.attachments && message.attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2 not-prose">
           {message.attachments.map((att, idx) => (
@@ -181,10 +256,15 @@ function TransportRenderer({ message }: { message: any }) {
   const tripId = message.tripId;
 
   return (
-    <UnifiedTransportCard
+    <TransportResultsCard
       origin={origin}
       destination={destination}
       departureDate={departureDate}
+      returnDate={message.returnDate}
+      today={message.today}
+      daysToGo={message.daysToGo}
+      bookingAdvice={message.bookingAdvice}
+      source={message.source}
       plans={plans}
       options={options}
       tripId={tripId}
@@ -208,19 +288,16 @@ function TransportComparisonRenderer({ message }: { message: any }) {
     if (!tripId || selectingId) return;
     setSelectingId(`${option.id}_${date}`);
     try {
-      const params = new URLSearchParams({
-        tripId,
-        type: option.mode || 'flight',
-        itemId: option.id,
-        provider: option.provider || '',
-        price: String(option.price || ''),
-        departureTime: option.departureTime || '',
-        arrivalTime: option.arrivalTime || '',
-        origin: option.departureCity || '',
-        destination: option.arrivalCity || '',
-        date: date,
+      const draft = createBookingDraft({
+        type: "transport",
+        item: option,
+        details: {
+          tripId,
+          date,
+          passengers: 1,
+        },
       });
-      router.push(`/booking/new?${params.toString()}`);
+      router.push(`/booking/${draft.id}`);
     } catch (e) {
       console.error('Failed to navigate to booking wizard', e);
     } finally {
@@ -291,7 +368,7 @@ function TransportComparisonRenderer({ message }: { message: any }) {
               <div className="p-4 flex-1 flex flex-col justify-center gap-1 border-t md:border-t-0 md:border-l border-cream-100">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{modeIcons[bestOption.mode] || '🎟️'}</span>
-                  <span className="font-bold text-sm text-ink-900">{bestOption.provider}</span>
+                  <span className="font-bold text-sm text-ink-900">{bestOption.provider || bestOption.mode}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-ink-600 mt-1">
                   <span className="font-semibold">{bestOption.departureTime}</span>
@@ -459,6 +536,7 @@ function ExpenditureModal({
 
 // ─── Hotel Renderer ────────────────────────────────────────────────────────────
 function HotelRenderer({ message }: { message: any }) {
+  const router = useRouter();
   const rawHotels = message.hotels || [];
   const destination = message.destination || "";
   const enrichedHotels = usePlaceImages(rawHotels, "hotel", destination);
@@ -471,12 +549,13 @@ function HotelRenderer({ message }: { message: any }) {
         <Card key={hotel.id} className="overflow-hidden border-cream-200 bg-white ">
           <div className="h-36 w-full overflow-hidden relative">
             <PlaceImage
-              src={isGeneratedImageUrl(hotel.imageUrl || '') ? undefined : hotel.imageUrl}
+              src={hotel.imageSource ? hotel.imageUrl : undefined}
               alt={hotel.imageAlt || hotel.name}
               source={hotel.imageSource}
               attribution={hotel.attribution}
               type="hotel"
               className="h-36 w-full rounded-t-card"
+              key={`${hotel.id}-${hotel.imageUrl || "pending"}`}
             />
             {hotel.recommendationReason && (
               <div className="absolute top-2 left-2 bg-sage-600/90 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded font-medium">
@@ -501,9 +580,21 @@ function HotelRenderer({ message }: { message: any }) {
               ))}
             </div>
             {message.tripId && (
-              <Link href={`/booking/new?type=hotel&itemId=${hotel.id}&tripId=${message.tripId}`} className="block mt-2">
-                <Button variant="outline" size="sm" className="w-full text-xs py-1 h-auto">Book Now</Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs py-1 h-auto mt-2"
+                onClick={() => {
+                  const draft = createBookingDraft({
+                    type: "hotel",
+                    item: hotel,
+                    details: { tripId: message.tripId },
+                  });
+                  router.push(`/booking/${draft.id}`);
+                }}
+              >
+                Book Now
+              </Button>
             )}
           </div>
         </Card>
@@ -675,4 +766,3 @@ export function MessageRenderer({ message }: { message: Message }) {
 
 // Export ExpenditureModal separately for use in BudgetCard
 export { ExpenditureModal };
-

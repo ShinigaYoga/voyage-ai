@@ -69,8 +69,9 @@ export class IndexedDbTripRepository implements TripRepository {
     return upserted;
   }
 
-  async delete(id: string): Promise<void> {
+  async deleteTrip(id: string): Promise<void> {
     const db = await getDB();
-    if (db) await db.delete("trips", id);
+    if (!db) throw new Error("Trip storage is unavailable");
+    await db.delete("trips", id);
   }
 }

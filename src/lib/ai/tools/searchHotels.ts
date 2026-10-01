@@ -28,6 +28,7 @@ export const searchHotelsTool: ToolDefinition = {
       artifact: {
         type: "hotel",
         tripId: ctx.tripId,
+        destination,
         hotels
       }
     };

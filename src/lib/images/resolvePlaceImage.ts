@@ -44,7 +44,7 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 
 function cacheKey(input: PlaceImageInput): string {
-  return `${CACHE_VERSION}|${input.name.toLowerCase().trim()}|${input.destination.toLowerCase().trim()}`;
+  return `${CACHE_VERSION}|${input.type || "attraction"}|${input.name.toLowerCase().trim()}|${input.destination.toLowerCase().trim()}`;
 }
 
 function getCached(input: PlaceImageInput): PlaceImageResult | null {
@@ -82,6 +82,11 @@ const PLACE_STOPWORDS = new Set([
   "the", "of", "and", "in", "at", "near", "old", "new", "great", "big",
 ]);
 
+const HOTEL_NAME_STOPWORDS = new Set([
+  "hotel", "resort", "grand", "luxury", "budget", "boutique", "inn", "villa",
+  "villas", "oasis", "suites", "suite", "the", "by",
+]);
+
 /** Normalize abbreviations: merge consecutive single-letter words ("M G Road" → "mg road") */
 function normalizeAbbr(str: string): string {
   return str
@@ -97,6 +102,16 @@ function makeTokens(str: string): Set<string> {
 
 function makeRawTokens(str: string): Set<string> {
   return new Set(normalizeAbbr(str).toLowerCase().split(/[\s,\-\(\)\.\/]+/).filter(w => w.length > 1));
+}
+
+function hotelNameMatches(name: string, destination: string, title: string): boolean {
+  const destinationTokens = makeRawTokens(destination);
+  const identityTokens = [...makeRawTokens(name)].filter(
+    token => !destinationTokens.has(token) && !HOTEL_NAME_STOPWORDS.has(token)
+  );
+  if (identityTokens.length === 0) return false;
+  const titleTokens = makeRawTokens(title);
+  return identityTokens.every(token => titleTokens.has(token));
 }
 
 /**
@@ -145,7 +160,10 @@ export function tokenOverlap(query: string, candidate: string): number {
 async function wikiGet(params: Record<string, string>): Promise<any> {
   const base = "https://en.wikipedia.org/w/api.php";
   const qs = new URLSearchParams({ ...params, format: "json", origin: "*" }).toString();
-  const res = await fetch(`${base}?${qs}`, { signal: AbortSignal.timeout(5000) });
+  const res = await fetch(`${base}?${qs}`, {
+    headers: { "User-Agent": "VoyageAI/1.0 (travel planning app)" },
+    signal: AbortSignal.timeout(5000),
+  });
   if (!res.ok) throw new Error(`Wikipedia API ${res.status}`);
   return res.json();
 }
@@ -217,6 +235,8 @@ async function commonsGeosearch(
   lat: number,
   lng: number,
   name: string,
+  destination: string,
+  type?: string,
   radiusMeters = 2000
 ): Promise<CommonsGeoResult | null> {
   try {
@@ -237,8 +257,9 @@ async function commonsGeosearch(
     // Filter hits whose title token-overlaps with the place name
     const nameTokens = makeTokens(name);
     const candidates = hits.filter(h => {
-      if (nameTokens.size === 0) return true; // accept any if name is pure stopwords
       const fileTitle = (h.title || "").replace(/^File:/i, "").replace(/\.[a-z]+$/i, "");
+      if (type === "hotel") return hotelNameMatches(name, destination, fileTitle);
+      if (nameTokens.size === 0) return true; // accept any if name is pure stopwords
       const overlap = tokenOverlap(name, fileTitle);
       return overlap > 0;
     });
@@ -290,7 +311,7 @@ const PERSON_PATTERNS = [
   /\balive\b/i,
 ];
 
-async function wikiLeadImage(name: string, destination: string): Promise<{
+async function wikiLeadImage(name: string, destination: string, type?: string): Promise<{
   page: any;
   categories: string[];
 } | null> {
@@ -313,6 +334,7 @@ async function wikiLeadImage(name: string, destination: string): Promise<{
     for (const page of pages) {
       const imgUrl = page.original?.source || page.thumbnail?.source;
       if (!imgUrl) continue;
+      if (type === "hotel" && !hotelNameMatches(name, destination, page.title)) continue;
       const overlap = tokenOverlap(name, page.title);
       if (overlap === 0) continue;
       const cats = (page.categories || []).map((c: any) => c.title || "");
@@ -365,7 +387,7 @@ async function _resolve(input: PlaceImageInput): Promise<PlaceImageResult> {
 
   // ── Stage A: Wikimedia Commons geosearch ──────────────────────────────────
   if (lat && lng) {
-    const commons = await commonsGeosearch(lat, lng, name);
+    const commons = await commonsGeosearch(lat, lng, name, destination, type);
     if (commons) {
       const score = tokenOverlap(name, commons.title.replace(/^File:/i, "").replace(/\.[a-z]+$/i, ""));
       // Only accept if name tokens appear in the file title (non-zero overlap)
@@ -383,7 +405,7 @@ async function _resolve(input: PlaceImageInput): Promise<PlaceImageResult> {
   }
 
   // ── Stage B: Wikipedia lead image (place-type gated) ─────────────────────
-  const wikiLead = await wikiLeadImage(name, destination);
+  const wikiLead = await wikiLeadImage(name, destination, type);
   if (wikiLead) {
     const { page, categories } = wikiLead;
     if (!isPersonOrEvent(categories)) {
@@ -418,6 +440,7 @@ async function _resolve(input: PlaceImageInput): Promise<PlaceImageResult> {
     for (const page of candidates) {
       const imgUrl = page.original?.source || page.thumbnail?.source;
       if (!imgUrl) continue;
+      if (type === "hotel" && !hotelNameMatches(name, destination, page.title)) continue;
       const overlap = tokenOverlap(name, page.title);
       if (overlap > bestOverlap) { bestOverlap = overlap; bestPage = page; }
     }
@@ -429,6 +452,7 @@ async function _resolve(input: PlaceImageInput): Promise<PlaceImageResult> {
     for (const title of [name, strippedName].filter(Boolean).filter((t, i, a) => a.indexOf(t) === i)) {
       const page = await fetchByTitle(title);
       if (page) {
+        if (type === "hotel" && !hotelNameMatches(name, destination, page.title)) continue;
         const overlap = tokenOverlap(name, page.title);
         if (overlap > bestOverlap) { bestOverlap = overlap; bestPage = page; }
         if (bestOverlap >= 0.5) break;
@@ -441,6 +465,7 @@ async function _resolve(input: PlaceImageInput): Promise<PlaceImageResult> {
     for (const prefix of [name, strippedName].filter(Boolean).filter((t, i, a) => a.indexOf(t) === i)) {
       const candidates = await prefixSearchWikipedia(prefix);
       for (const page of candidates) {
+        if (type === "hotel" && !hotelNameMatches(name, destination, page.title)) continue;
         const overlap = tokenOverlap(name, page.title);
         if (overlap > bestOverlap) { bestOverlap = overlap; bestPage = page; }
       }

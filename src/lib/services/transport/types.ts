@@ -1,7 +1,7 @@
 export type TransportOption = {
   id: string;
   mode: 'flight' | 'train' | 'bus';
-  provider: string;
+  provider?: string;
   departureCity: string;
   arrivalCity: string;
   departureTime: string;
@@ -10,6 +10,8 @@ export type TransportOption = {
   price: number;
   stops: number;
   availability: 'available' | 'few-seats' | 'sold-out';
+  isEstimate?: boolean;
+  priceRange?: { min: number; max: number };
   score?: number;
   recommendationReason?: string;
 };

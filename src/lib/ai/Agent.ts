@@ -1,18 +1,35 @@
 import { AIProvider, AIMessage, AIToolDefinition } from "./providers/AIProvider";
 import { ToolDefinition, ToolContext } from "./tools/types";
 import { Trip } from "@/lib/types";
+import type { TransportOption } from "@/lib/services/transport/types";
+import type { TransportPlan } from "@/lib/services/transport/planningTypes";
+import type { TransportBookingAdvice } from "@/lib/services/transport/transportAdvice";
 
 export type AgentResult = {
   textContent: string | null;
   artifacts: Array<
     | { type: 'trip'; trip: Trip }
-    | { type: 'itinerary'; itinerary: any; tripName?: string }
+    | { type: 'itinerary'; itinerary: any; tripId?: string; tripName?: string }
     | { type: 'tripUpdated'; changes: string[]; trip: Trip }
     | { type: 'transport'; tripId: string; options: any[]; origin?: string; destination?: string }
     | { type: 'hotel'; tripId: string; hotels: any[] }
     | { type: 'restaurant'; tripId: string; restaurants: any[] }
     | { type: 'attraction'; tripId: string; attractions: any[] }
     | { type: 'booking'; tripId: string; booking: any }
+    | {
+        type: 'unified_transport';
+        tripId: string;
+        origin: string;
+        destination: string;
+        departureDate?: string;
+        returnDate?: string;
+        today: string;
+        daysToGo?: number;
+        bookingAdvice?: TransportBookingAdvice;
+        plans: TransportPlan[];
+        options: TransportOption[];
+        source: 'estimate' | 'live';
+      }
   >;
   errors: string[];
 };
@@ -90,7 +107,22 @@ export class Agent {
         try {
           const { result, artifact } = await tool.execute(call.arguments, this.toolContext);
           if (artifact) {
-            artifacts.push(artifact as any);
+            if (artifact.type === "itinerary") {
+              const itineraryTripId = artifact.tripId || this.toolContext.tripId;
+              const existingIndex = itineraryTripId
+                ? artifacts.findIndex(existing =>
+                    existing.type === "itinerary" &&
+                    (existing.tripId || this.toolContext.tripId) === itineraryTripId
+                  )
+                : -1;
+              if (existingIndex >= 0) {
+                artifacts[existingIndex] = artifact as AgentResult["artifacts"][number];
+              } else {
+                artifacts.push(artifact as AgentResult["artifacts"][number]);
+              }
+            } else {
+              artifacts.push(artifact as any);
+            }
           }
 
           // Append assistant message with tool call

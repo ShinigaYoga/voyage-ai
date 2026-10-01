@@ -42,6 +42,12 @@ export interface BudgetBreakdown {
   status: BudgetStatus;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Trip {
   id: string;
   name: string;
@@ -58,6 +64,7 @@ export interface Trip {
   budgetRecommendations?: string[];
   bookings?: Booking[];
   notes?: string;
+  checklist?: ChecklistItem[];
   transport?: any;
   selectedHotel?: { id: string; name?: string; lat?: number; lon?: number; [key: string]: any };
   // AI-researched destination knowledge (cached in IDB, populated on trip creation)
@@ -74,6 +81,11 @@ export interface Booking {
   tripId: string;
   itemId: string;
   itemType: string; // 'hotel' | 'flight' | 'train' | 'bus' | 'activity' | 'restaurant' | etc.
+  type?: 'transport' | 'hotel';
+  itemSnapshot?: Record<string, unknown>;
+  dates?: Record<string, string>;
+  travelers?: number;
+  userId?: string;
   price: number;
   status: string;
   message?: string;
@@ -126,7 +138,7 @@ export interface TripUpdatedMessage extends MessageBase {
 
 // Stubs for other structured message types
 export interface TransportMessage extends MessageBase { type: "transport"; options: any[]; origin?: string; destination?: string; }
-export interface HotelMessage extends MessageBase { type: "hotel"; hotels: any[]; }
+export interface HotelMessage extends MessageBase { type: "hotel"; hotels: any[]; destination?: string; }
 export interface RestaurantMessage extends MessageBase { type: "restaurant"; restaurants: any[]; }
 export interface AttractionMessage extends MessageBase { type: "attraction"; attractions: any[]; }
 export interface ItineraryMessage extends MessageBase { type: "itinerary"; itinerary: { days: Day[] }; tripId: string; tripName: string; }
@@ -152,6 +164,17 @@ export interface UnifiedTransportMessage extends MessageBase {
   origin: string;
   destination: string;
   departureDate?: string;
+  returnDate?: string;
+  today?: string;
+  daysToGo?: number;
+  bookingAdvice?: {
+    daysToGo: number;
+    bookNow: boolean;
+    windowStart: string;
+    windowEnd: string;
+    milestones: string[];
+  };
+  source?: "estimate" | "live";
   plans?: any[];
   options: any[];
 }
@@ -180,6 +203,7 @@ export type CreateMessageInput = DistributiveOmit<Message, "id" | "createdAt">;
 export interface UserProfile {
   id: string; // usually a singleton ID like "default_user"
   name: string;
+  email?: string;
   bio: string;
   currency: string;
   defaultTravelers: number;

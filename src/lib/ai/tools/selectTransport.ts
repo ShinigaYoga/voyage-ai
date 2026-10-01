@@ -53,7 +53,7 @@ export const selectTransportTool: ToolDefinition = {
       },
       artifact: {
         type: 'tripUpdated',
-        changes: [`Transport selected: ${selected.provider} (${selected.mode})`],
+        changes: [`Transport selected: ${selected.provider || selected.mode} (${selected.mode})`],
         trip: updatedTrip,
       }
     };

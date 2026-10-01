@@ -19,7 +19,7 @@ export class GeminiProvider implements AIProvider {
 
     const isRetryableError = (msg: string) => {
       return (
-        msg.includes("503") ||
+        /\b5\d{2}\b/.test(msg) ||
         msg.includes("429") ||
         msg.includes("UNAVAILABLE") ||
         msg.includes("RESOURCE_EXHAUSTED") ||
@@ -54,10 +54,12 @@ export class GeminiProvider implements AIProvider {
       return result;
     } catch (err: any) {
       const msg: string = err.message || "";
-      console.error(`[GeminiProvider] Attempt 1 FAIL: model=${this.primaryModelName} errorMsg=${msg}`);
-      
-      if (isAuthOrConfigError(msg)) {
-        console.error(`[GeminiProvider] Auth/config error — not retrying. Full msg: ${msg}`);
+      const isAuthOrConfig = isAuthOrConfigError(msg);
+      if (!isAuthOrConfig) {
+        console.error(`[GeminiProvider] Attempt 1 failed for model=${this.primaryModelName}.`);
+      }
+
+      if (isAuthOrConfig) {
         return {
           content: "The AI model configured is unavailable or auth failed. Check the model name/key in config.",
           toolCalls: [],
@@ -111,7 +113,9 @@ export class GeminiProvider implements AIProvider {
       return result;
     } catch (err: any) {
       const msg: string = err.message || "";
-      console.warn(`[GeminiProvider] Attempt 2 (${this.primaryModelName}) failed: ${msg}. Returning error state.`);
+      if (!isAuthOrConfigError(msg)) {
+        console.warn(`[GeminiProvider] Attempt 2 failed for model=${this.primaryModelName}. Returning error state.`);
+      }
       return {
         content: `Couldn't reach Gemini: ${msg || "Unknown error"}`,
         toolCalls: [],
@@ -206,4 +210,3 @@ export class GeminiProvider implements AIProvider {
     };
   }
 }
-

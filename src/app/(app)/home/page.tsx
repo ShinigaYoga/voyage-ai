@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IndexedDbTripRepository } from "@/lib/repositories/indexeddb/IndexedDbTripRepository";
 import { DESTINATIONS, searchDestinations, DestinationMetadata } from "@/lib/data/destinations";
+import { useUserProfile, getProfileDisplayName } from "@/lib/hooks/useUserProfile";
 
 const categories = [
   { label: "Hikes & Trails", icon: <Map size={16} /> },
@@ -25,6 +26,7 @@ const categories = [
 
 export default function HomePage() {
   const router = useRouter();
+  const profile = useUserProfile();
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [tripCount, setTripCount] = useState(0);
   const [recIndex, setRecIndex] = useState(0);
@@ -131,9 +133,9 @@ export default function HomePage() {
             <div className="hidden md:inline-flex mb-2 px-3 py-1 bg-sage-100 text-sage-800 rounded-pill text-xs font-semibold">
               Handcrafted Expedition Stream
             </div>
-            <h1 className="font-display font-bold text-3xl text-ink-900">Hello, traveler 👋</h1>
+            <h1 className="font-display font-bold text-3xl text-ink-900">Hello, {getProfileDisplayName(profile)} 👋</h1>
           </div>
-          <Avatar src="https://i.pravatar.cc/150?img=32" />
+          <Avatar src={profile?.avatarUrl} fallback={getProfileDisplayName(profile).charAt(0).toUpperCase()} />
         </div>
 
         <div ref={searchRef} className="relative w-full">

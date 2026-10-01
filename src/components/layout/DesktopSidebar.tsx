@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Map, Compass, MessageCircle, User, Compass as BrandCompass } from "lucide-react";
 import { Avatar } from "../ui/Avatar";
+import { useUserProfile, getProfileDisplayName } from "@/lib/hooks/useUserProfile";
 
 const navItems = [
   { label: "Home", href: "/home", icon: Home },
@@ -16,6 +17,7 @@ const navItems = [
 
 export function DesktopSidebar() {
   const pathname = usePathname();
+  const profile = useUserProfile();
 
   const [lastTrip, setLastTrip] = React.useState<{id: string, name: string} | null>(null);
 
@@ -78,6 +80,10 @@ export function DesktopSidebar() {
           )}
         </ul>
       </nav>
+      <Link href="/profile" className="flex items-center gap-3 px-4 py-3 border-t border-cream-200">
+        <Avatar size="sm" src={profile?.avatarUrl} fallback={getProfileDisplayName(profile).charAt(0).toUpperCase()} />
+        <span className="truncate text-sm font-medium text-ink-700">{getProfileDisplayName(profile)}</span>
+      </Link>
     </aside>
   );
 }

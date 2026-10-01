@@ -13,8 +13,8 @@ export class TransportPlanningService {
   /**
    * Generates a planning window and transport estimates for a future trip.
    */
-  public generateTransportPlan(origin: string, destination: string, departureDate: string): TransportPlan[] {
-    const today = new Date();
+  public generateTransportPlan(origin: string, destination: string, departureDate: string, referenceDate = new Date()): TransportPlan[] {
+    const today = new Date(referenceDate);
     // Strip time for clean comparison
     today.setHours(0, 0, 0, 0);
     const depDate = new Date(departureDate);

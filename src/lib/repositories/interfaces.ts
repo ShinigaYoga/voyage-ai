@@ -6,7 +6,7 @@ export interface TripRepository {
   create(trip: Omit<Trip, "id" | "createdAt" | "updatedAt">): Promise<Trip>;
   update(id: string, patch: Partial<Trip>): Promise<Trip>;
   upsert(trip: Trip): Promise<Trip>;
-  delete(id: string): Promise<void>;
+  deleteTrip(id: string): Promise<void>;
 }
 
 export interface MessageRepository {

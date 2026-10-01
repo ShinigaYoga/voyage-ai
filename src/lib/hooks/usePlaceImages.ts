@@ -25,12 +25,12 @@ export interface PlaceImageResult {
 }
 
 const CONCURRENCY = 4;
-const SESSION_PREFIX = "placeimg_v3_";
+const SESSION_PREFIX = "placeimg_v4_";
 
-function sessionKey(name: string, destination: string, lat?: number | null, lng?: number | null): string {
+function sessionKey(name: string, type: "hotel" | "attraction", destination: string, lat?: number | null, lng?: number | null): string {
   const latStr = lat != null ? lat.toFixed(3) : "";
   const lngStr = lng != null ? lng.toFixed(3) : "";
-  return `${name.toLowerCase().trim()}|${destination.toLowerCase().trim()}|${latStr}|${lngStr}`;
+  return `${type}|${name.toLowerCase().trim()}|${destination.toLowerCase().trim()}|${latStr}|${lngStr}`;
 }
 
 function getCached(key: string): PlaceImageResult | null {
@@ -58,7 +58,7 @@ async function fetchPlaceImage(
   lat?: number | null,
   lng?: number | null,
 ): Promise<PlaceImageResult> {
-  const key = sessionKey(name, destination, lat, lng);
+  const key = sessionKey(name, type, destination, lat, lng);
   const cached = getCached(key);
   if (cached) return cached;
 
@@ -152,8 +152,9 @@ export function usePlaceImages<T extends PlaceImageable>(
     let cancelled = false;
 
     const tasks = items.map((item, idx) => async () => {
-      // Skip if already has a verified (non-generic) image
-      if (item.imageUrl && !item.imageUrl.includes("source.unsplash.com")) {
+      // Hotel provider URLs are illustrative, not property-specific; resolve each
+      // recommendation by its actual name and destination.
+      if (type !== "hotel" && item.imageUrl && !item.imageUrl.includes("source.unsplash.com")) {
         return { idx, enrichedItem: item };
       }
 
