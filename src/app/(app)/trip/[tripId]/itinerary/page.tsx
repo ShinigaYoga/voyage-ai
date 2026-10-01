@@ -122,7 +122,7 @@ export default function ItineraryPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-cream-50 dark:bg-[#141412] pb-12 flex flex-col">
+    <div className="min-h-[100dvh] bg-cream-50  pb-12 flex flex-col">
       <div className="sticky top-0 z-20 bg-cream-50/90 backdrop-blur-md border-b border-cream-200">
         <PageHeader title="Itinerary" showBack />
         <DaySelectorPills 
@@ -134,15 +134,22 @@ export default function ItineraryPage() {
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 md:px-8 mt-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-display font-bold text-ink-900">
-            Day {currentDay.dayIndex + 1}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-display font-bold text-ink-900">
+              Day {currentDay.dayIndex + 1}
+            </h2>
+            {trip.destinationProfile?.researchQuality === 'fallback' && (
+              <span className="border border-sage-500 text-sage-800 bg-sage-100/50 px-3 py-1 rounded-pill text-xs font-semibold">
+                Starter suggestions — limited data for {trip.destination}. Edit freely.
+              </span>
+            )}
+          </div>
           <Button variant="outline" size="sm" onClick={openAddSheet} className="gap-2 bg-white">
             <Plus size={16} /> Add
           </Button>
         </div>
 
-        <div className="bg-white dark:bg-cream-200 rounded-cardLg p-4 md:p-6 shadow-sm border border-cream-200 min-h-[50vh]">
+        <div className="bg-white  rounded-cardLg p-4 md:p-6 shadow-sm border border-cream-200 min-h-[50vh]">
           <DraggableActivityList 
             activities={currentDay.activities} 
             originCoords={originCoords}

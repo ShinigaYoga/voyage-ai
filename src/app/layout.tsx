@@ -27,7 +27,9 @@ export default function RootLayout({
       lang="en"
       className={`${jakarta.variable} ${inter.variable} antialiased h-full`}
     >
-      <body className="h-full flex flex-col">{children}</body>
+      <body className="h-full flex flex-col">
+        {children}
+      </body>
     </html>
   );
 }

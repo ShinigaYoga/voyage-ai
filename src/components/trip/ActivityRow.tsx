@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { Activity } from "@/lib/types";
 import { MapPin, Clock, MoreVertical, Trash2, Edit2, Move } from "lucide-react";
 import { IconButton } from "../ui/IconButton";
+import { ImageWithFallback } from "../ui/ImageWithFallback";
+import { isGeneratedImageUrl, isImageEligible } from "@/lib/images/activityImage";
+import { PlaceImage } from "../ui/PlaceImage";
 
 interface ActivityRowProps {
   activity: Activity;
@@ -59,15 +62,15 @@ export function ActivityRow({ activity, isLast = false, distanceLabel, isActive,
 
       {/* Content Card */}
       <div className="flex-1 pb-6" onClick={onClick}>
-        <div className={`bg-white dark:bg-cream-200 rounded-2xl p-4 shadow-sm border ${isActive ? 'border-sage-400 ring-2 ring-sage-400/20 shadow-md' : 'border-cream-100 dark:border-cream-300'} group-hover:border-sage-200 group-hover:shadow-soft transition-all cursor-pointer`}>
-          <div className="flex justify-between items-start gap-4">
-            <div>
+        <div className={`bg-white  rounded-2xl p-4 shadow-sm border ${isActive ? 'border-sage-400 ring-2 ring-sage-400/20 shadow-md' : 'border-cream-100 '} group-hover:border-sage-200 group-hover:shadow-soft transition-all cursor-pointer`}>
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex-1 min-w-0">
               <h4 className="font-bold text-ink-900 leading-tight mb-1">{activity.name}</h4>
               
               <div className="flex flex-wrap items-center gap-2 text-xs text-ink-500 mt-2">
                 <span className="flex items-center gap-1"><MapPin size={12} /> {activity.location}</span>
                 {distanceLabel && (
-                  <span className="inline-flex items-center bg-cream-100 dark:bg-cream-300/60 text-ink-500 border border-cream-200 rounded-full px-2 py-0.5 font-medium leading-none">
+                  <span className="inline-flex items-center bg-cream-100  text-ink-500 border border-cream-200 rounded-full px-2 py-0.5 font-medium leading-none">
                     {distanceLabel}
                   </span>
                 )}
@@ -80,6 +83,21 @@ export function ActivityRow({ activity, isLast = false, distanceLabel, isActive,
               )}
             </div>
 
+            <div className="flex items-start gap-1 shrink-0">
+              {/* Activity Image - shown for all eligible attraction categories, or if verified image exists */}
+              {(isImageEligible(activity.category) || (activity.imageUrl && !isGeneratedImageUrl(activity.imageUrl))) && (
+                <PlaceImage
+                  src={isGeneratedImageUrl(activity.imageUrl || '') ? undefined : activity.imageUrl}
+                  alt={activity.imageAlt || activity.name}
+                  source={activity.imageSource}
+                  attribution={activity.attribution}
+                  type="attraction"
+                  className="w-20 h-16 rounded-xl"
+                  hideIfMissing={!isImageEligible(activity.category)}
+                />
+              )}
+
+
             <div className="relative">
               <IconButton 
                 icon={<MoreVertical size={16} />} 
@@ -91,7 +109,7 @@ export function ActivityRow({ activity, isLast = false, distanceLabel, isActive,
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-cream-200 rounded-xl shadow-float border border-cream-100 dark:border-cream-300 py-1 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-1 w-32 bg-white  rounded-xl shadow-float border border-cream-100  py-1 z-50 overflow-hidden">
                     {onEdit && (
                       <button 
                         onClick={() => { setMenuOpen(false); onEdit(activity.id); }}
@@ -112,6 +130,7 @@ export function ActivityRow({ activity, isLast = false, distanceLabel, isActive,
                 </>
               )}
             </div>
+            </div>{/* close image+menu wrapper */}
           </div>
         </div>
       </div>

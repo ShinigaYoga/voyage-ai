@@ -10,4 +10,6 @@ export type Hotel = {
   recommendationReason?: string;
   lat?: number;
   lon?: number;
+  imageAlt?: string;
+  imageSource?: string;
 };

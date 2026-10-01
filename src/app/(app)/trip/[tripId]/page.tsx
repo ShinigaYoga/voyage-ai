@@ -101,7 +101,7 @@ function TripDashboard() {
       // --- Step 2: Background sync from server (non-blocking) ---
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
+        const timeout = setTimeout(() => controller.abort(), 10000);
         const res = await fetch(`/api/trips/${id}`, { signal: controller.signal });
         clearTimeout(timeout);
         if (res.ok && !cancelled) {
@@ -143,18 +143,10 @@ function TripDashboard() {
 
     load();
 
-    const fallbackTimer = setTimeout(() => {
-      if (!cancelled) {
-        console.warn("[TripDetailPage] fallback triggered after 3s");
-        setLoading(false);
-      }
-    }, 3000);
-
     return () => {
       cancelled = true;
       window.removeEventListener("trip-updated", syncFromTripEvent);
       window.removeEventListener("storage", syncFromStorage);
-      clearTimeout(fallbackTimer);
     };
   }, [tripId]);
 
@@ -197,9 +189,66 @@ function TripDashboard() {
     showToast(`Budget set to ₹${newBudget.toLocaleString('en-IN')}`);
   };
 
+  
+
+  const handleReplanWithBudget = async (budget: number) => {
+    if (!trip) return;
+    setReplanningDay(null);
+    // validation
+    if (!budget || typeof budget !== 'number' || isNaN(budget) || budget <= 0) {
+      showToast('Please enter a valid positive budget.');
+      return;
+    }
+    // show loading
+    showToast('Replanning itinerary — this may take a few seconds...');
+    try {
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Generate a full itinerary within a budget of ₹${budget}. Use the createItinerary tool with the budget parameter.`,
+          tripId: trip.id,
+          // agent tools read trip from repository; include trip in payload to ensure local changes are considered
+          trip,
+        }),
+      });
+      const data = await res.json();
+      // The agent route returns artifacts and also may include trip and result fields
+      if (data.result?.itinerary && data.result?.budgetBreakdown) {
+        const updated: Trip = {
+          ...trip,
+          itinerary: data.result.itinerary,
+          budgetBreakdown: data.result.budgetBreakdown,
+          budgetRecommendations: (data.result.recommendations || data.recommendations || trip.budgetRecommendations) as string[] | undefined,
+        } as Trip;
+        // persist and refresh
+        await persistTrip(updated);
+        setTrip(updated);
+        showToast('Replanned itinerary with budget applied');
+      } else if (data.trip) {
+        // server returned updated trip
+        const updatedTrip = data.trip as Trip;
+        // Ensure budgetBreakdown is present
+        updatedTrip.budgetBreakdown = updatedTrip.budgetBreakdown || calculateBudgetBreakdown(updatedTrip);
+        await persistTrip(updatedTrip);
+        setTrip(updatedTrip);
+        showToast('Replanned itinerary with budget applied');
+      } else {
+        showToast('Failed to replan with budget');
+      }
+    } catch (err) {
+      console.warn(err);
+      showToast("Error replanning day.");
+    } finally {
+    }
+  };
+
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editingDayIndex, setEditingDayIndex] = useState<number>(0);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const handleEditActivityClick = (idOrNew: string, dayIndex: number) => {
     setEditingDayIndex(dayIndex);
@@ -260,15 +309,31 @@ function TripDashboard() {
   };
 
   const handleCancelBooking = async (bookingId: string) => {
+    // Show confirmation modal before cancelling
     if (!trip || !trip.bookings) return;
-    const newBookings = trip.bookings.map(b => 
+    setPendingCancelId(bookingId);
+    setShowCancelConfirm(true);
+  };
+
+  const performCancel = async (bookingId: string) => {
+    if (!trip || !trip.bookings || isCancelling) return;
+    setIsCancelling(true);
+    const newBookings = trip.bookings.map(b =>
       b.id === bookingId ? { ...b, status: 'cancelled' } : b
     );
     const updated = { ...trip, bookings: newBookings };
     updated.budgetBreakdown = calculateBudgetBreakdown(updated);
     setTrip(updated);
-    await persistTrip(updated);
-    showToast("Booking cancelled");
+    try {
+      await persistTrip(updated);
+      showToast("Booking cancelled");
+    } catch {
+      showToast("Failed to persist cancellation. Please try again.");
+    } finally {
+      setIsCancelling(false);
+      setShowCancelConfirm(false);
+      setPendingCancelId(null);
+    }
   };
 
   const handleReplanDay = async (dayIndex: number) => {
@@ -330,7 +395,7 @@ function TripDashboard() {
   });
 
   return (
-    <div className="min-h-dvh bg-cream-50 dark:bg-[#141412] pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12 overflow-x-hidden">
+    <div className="min-h-dvh bg-cream-50  pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-12 overflow-x-hidden">
       <PageHeader
         title=""
         showBack
@@ -356,6 +421,28 @@ function TripDashboard() {
 
         {/* Left Column - Main Content */}
         <div className="flex-1">
+          <div className="mb-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                placeholder="Replan budget (e.g. 25000)"
+                className="w-40 px-3 py-2 rounded-lg border border-cream-200"
+                onChange={() => { /* noop, use button input prompt below */ }}
+                id="replanBudgetInput"
+              />
+              <button
+                onClick={() => {
+                  const el = document.getElementById('replanBudgetInput') as HTMLInputElement | null;
+                  if (!el) return;
+                  const val = parseInt(el.value.replace(/[^0-9]/g, ''));
+                  if (!isNaN(val) && val > 0) handleReplanWithBudget(val);
+                }}
+                className="px-3 py-2 bg-sage-600 text-white rounded-lg"
+              >
+                Replan with Budget
+              </button>
+            </div>
+          </div>
           {/* Hero Card */}
           <div className={`relative overflow-hidden rounded-cardLg p-8 md:p-12 mb-8 bg-linear-to-br ${profile.heroBg} shadow-sm border border-white/20`}>
             <div className="absolute top-4 right-4 opacity-50 text-8xl pointer-events-none select-none">
@@ -366,7 +453,12 @@ function TripDashboard() {
                 {trip.name}
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-ink-700 font-medium">
-                <span className="bg-white/40 dark:bg-cream-200/40 px-3 py-1 rounded-pill backdrop-blur-sm">{trip.destination}</span>
+                <span className="bg-white/40  px-3 py-1 rounded-pill backdrop-blur-sm">{trip.destination}</span>
+                {trip.destinationProfile?.researchQuality === 'fallback' && (
+                  <span className="border border-sage-500 text-sage-800 bg-sage-100/50 px-3 py-1 rounded-pill text-sm backdrop-blur-sm font-semibold">
+                    Starter suggestions — limited data for {trip.destination}. Edit freely.
+                  </span>
+                )}
                 <span>•</span>
                 <span>{trip.dates || 'Dates TBD'}</span>
                 <span>•</span>
@@ -409,19 +501,19 @@ function TripDashboard() {
                 {rainDaysWithOutdoorActivities.length > 0 && (
                   <div className="mb-6 space-y-3">
                     {rainDaysWithOutdoorActivities.map(rainDay => (
-                      <div key={rainDay.dayIndex} className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/50 rounded-cardLg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                      <div key={rainDay.dayIndex} className="bg-sky-50  border border-sky-200  rounded-cardLg p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                         <div className="flex items-start gap-3">
                           <span className="text-2xl mt-1">🌧️</span>
                           <div>
-                            <p className="font-bold text-sky-900 dark:text-sky-100">Rain is expected on Day {rainDay.dayIndex + 1}.</p>
-                            <p className="text-sm text-sky-700 dark:text-sky-300">Would you like to replan this day for indoor activities?</p>
+                            <p className="font-bold text-sky-900 ">Rain is expected on Day {rainDay.dayIndex + 1}.</p>
+                            <p className="text-sm text-sky-700 ">Would you like to replan this day for indoor activities?</p>
                           </div>
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="flex-1 md:flex-none border-sky-200 bg-white dark:bg-sky-950 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900"
+                            className="flex-1 md:flex-none border-sky-200 bg-white  text-sky-700  hover:bg-sky-100 "
                             onClick={() => setDismissedRainDays(prev => [...prev, rainDay.dayIndex])}
                           >
                             Keep as is
@@ -441,7 +533,7 @@ function TripDashboard() {
                 )}
                 
                 {days.length === 0 ? (
-                  <div className="text-center py-12 bg-cream-50 dark:bg-cream-200 rounded-cardLg border border-cream-200 border-dashed">
+                  <div className="text-center py-12 bg-cream-50  rounded-cardLg border border-cream-200 border-dashed">
                     <p className="text-ink-500 mb-4">No itinerary generated yet.</p>
                     <Button onClick={() => router.push('/chat')}>Ask Voyage to create one</Button>
                   </div>
@@ -452,6 +544,7 @@ function TripDashboard() {
                         key={day.dayIndex}
                         day={day}
                         destination={trip.destination}
+                        destinationCoords={trip.destinationCoords}
                         originCoords={originCoords}
                         onEditActivity={(id) => handleEditActivityClick(id, day.dayIndex)}
                         onRemoveActivity={handleRemoveActivity}
@@ -468,6 +561,7 @@ function TripDashboard() {
                   activities={days.flatMap(d => d.activities)} 
                   originCoords={originCoords}
                   destination={trip.destination}
+                  destinationCoords={trip.destinationCoords}
                 />
               </div>
             )}
@@ -480,46 +574,84 @@ function TripDashboard() {
                 </div>
                 
                 {(!trip.bookings || trip.bookings.length === 0) ? (
-                  <div className="text-center py-12 bg-cream-50 dark:bg-[#1C1C1A] rounded-cardLg border border-cream-200 dark:border-cream-200/20 border-dashed">
+                  <div className="text-center py-12 bg-cream-50  rounded-cardLg border border-cream-200  border-dashed">
                     <p className="text-4xl mb-3">🎟️</p>
-                    <p className="text-ink-700 dark:text-ink-700 font-medium">No bookings yet</p>
+                    <p className="text-ink-700  font-medium">No bookings yet</p>
                     <p className="text-ink-500 text-sm mt-1">Ask Voyage AI to find hotels, restaurants or activities and tap Book Now.</p>
                     <Button variant="outline" size="sm" className="mt-4" onClick={() => router.push(`/chat?tripId=${trip.id}`)}>Ask Voyage AI</Button>
                   </div>
                 ) : (
                   <div className="grid gap-4">
-                    {trip.bookings.map((booking: NonNullable<Trip["bookings"]>[number]) => (
-                      <div key={booking.id} className="bg-white dark:bg-cream-200 p-4 rounded-xl shadow-sm border border-cream-200 flex flex-col md:flex-row justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold uppercase tracking-wider text-ink-500">{booking.itemType}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase
-                              ${booking.status === 'confirmed' ? 'bg-sage-100 text-sage-700' : 
-                                booking.status === 'cancelled' ? 'bg-coral-100 text-coral-700' : 
-                                'bg-cream-100 text-ink-600'}`}>
-                              {booking.status}
-                            </span>
+                    {trip.bookings.map((booking: NonNullable<Trip["bookings"]>[number]) => {
+                      const isTransport = ['flight', 'train', 'bus'].includes(booking.itemType);
+                      const demo = typeof booking.message === 'string' && booking.message.toLowerCase().includes('prototype');
+                      const operator = booking.details?.operator || booking.details?.provider || booking.details?.carrier;
+                      const origin = booking.details?.origin || booking.details?.from;
+                      const destination = booking.details?.destination || booking.details?.to;
+                      const departure = booking.details?.departureDateTime || booking.details?.departureTime || booking.details?.departure;
+                      const arrival = booking.details?.arrivalDateTime || booking.details?.arrivalTime || booking.details?.arrival;
+                      const passengers = booking.details?.passengers || booking.details?.passengerCount || booking.details?.pax;
+
+                      return (
+                        <div key={booking.id} className="bg-white p-4 rounded-xl shadow-sm border border-cream-200 flex flex-col md:flex-row justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold uppercase tracking-wider text-ink-500">
+                                {booking.itemType === 'flight' ? '✈️ Flight' : booking.itemType === 'train' ? '🚆 Train' : booking.itemType === 'bus' ? '🚌 Bus' : isTransport ? 'Transport' : booking.itemType}
+                              </span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase
+                                ${booking.status === 'confirmed' ? 'bg-sage-100 text-sage-700' : 
+                                  booking.status === 'cancelled' ? 'bg-coral-100 text-coral-700' : 
+                                  'bg-cream-100 text-ink-600'}`}>
+                                {booking.status}
+                              </span>
+                              {demo && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-amber-100 text-amber-800">Demo</span>
+                              )}
+                            </div>
+
+                            <div className="font-bold text-ink-900 text-lg">{booking.details?.itemName || booking.itemId}</div>
+
+                            {isTransport ? (
+                              <div className="text-sm text-ink-700 mt-2 space-y-1">
+                                {operator && <div><span className="font-medium">Provider:</span> {operator}</div>}
+                                <div className="flex gap-2 flex-wrap">
+                                  {origin && <div><span className="font-medium">From:</span> {origin}</div>}
+                                  {destination && <div><span className="font-medium">To:</span> {destination}</div>}
+                                </div>
+                                <div className="flex gap-4 flex-wrap">
+                                  {departure && <div><span className="font-medium">Departs:</span> {departure}</div>}
+                                  {arrival && <div><span className="font-medium">Arrives:</span> {arrival}</div>}
+                                </div>
+                                {typeof passengers !== 'undefined' && <div><span className="font-medium">Passengers:</span> {passengers}</div>}
+                                {booking.confirmationCode && <div className="text-xs text-ink-500 font-mono">Ref: {booking.confirmationCode}</div>}
+                                <div className="text-sm text-ink-500 font-mono mt-1">ID: {booking.id}</div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="text-sm text-ink-500 font-mono mt-1">ID: {booking.id}</div>
+                              </div>
+                            )}
                           </div>
-                          <div className="font-bold text-ink-900 text-lg">{booking.details?.itemName || booking.itemId}</div>
-                          <div className="text-sm text-ink-500 font-mono mt-1">ID: {booking.id}</div>
+
+                          <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3">
+                            <div className="font-bold text-sage-600 text-xl">₹{booking.price?.toLocaleString()}</div>
+                            {booking.status !== 'cancelled' && (
+                              <Button variant="ghost" size="sm" className="text-coral-600 hover:bg-coral-50" onClick={() => handleCancelBooking(booking.id)}>
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3">
-                          <div className="font-bold text-sage-600 text-xl">₹{booking.price?.toLocaleString()}</div>
-                          {booking.status !== 'cancelled' && (
-                            <Button variant="ghost" size="sm" className="text-coral-600 hover:bg-coral-50" onClick={() => handleCancelBooking(booking.id)}>
-                              Cancel
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
 
             {activeTab === 'notes' && (
-              <div className="bg-cream-50 dark:bg-cream-200 rounded-cardLg p-4 shadow-sm border border-cream-200 h-100">
+              <div className="bg-cream-50  rounded-cardLg p-4 shadow-sm border border-cream-200 h-100">
                 <textarea
                   className="w-full h-full resize-none outline-none text-ink-700 leading-relaxed bg-transparent"
                   placeholder="Jot down packing lists, ideas, or reminders here..."
@@ -565,7 +697,7 @@ function TripDashboard() {
       </main>
 
       {/* Mobile Sticky Action Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-cream-50/90 dark:bg-cream-100/90 backdrop-blur-md border-t border-cream-200 flex gap-3 z-30">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-cream-50/90  backdrop-blur-md border-t border-cream-200 flex gap-3 z-30">
         <Button
           className="flex-1 flex justify-center items-center gap-2"
           onClick={() => router.push(`/chat?tripId=${trip.id}`)}
@@ -589,6 +721,31 @@ function TripDashboard() {
         onClose={() => setEditSheetOpen(false)}
         onSave={handleSaveActivitySheet}
       />
+      {/* Cancel confirmation modal */}
+      {showCancelConfirm && pendingCancelId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+            <h3 id="cancel-modal-title" className="text-lg font-display font-bold text-ink-900 mb-2">Cancel this booking?</h3>
+            <p className="text-sm text-ink-600 mb-6">Are you sure you want to cancel this booking?</p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                disabled={isCancelling}
+                onClick={() => { setShowCancelConfirm(false); setPendingCancelId(null); }}
+              >
+                No, Keep Booking
+              </Button>
+              <Button
+                disabled={isCancelling}
+                onClick={() => performCancel(pendingCancelId)}
+                className="bg-coral-600 text-white hover:bg-coral-700 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? 'Cancelling…' : 'Yes, Cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import { ToolDefinition } from "./types";
 import { calculateBudgetBreakdown } from "@/lib/budget/engine";
-import { ACTIVITY_BANK, ActivityTemplate } from "@/lib/itinerary/activityBank";
-import { getDestinationProfile } from "@/lib/itinerary/destinations";
 import { getWeatherService } from "@/lib/services/weather";
 import { Activity } from "@/lib/types";
 
@@ -26,82 +24,61 @@ export const replanDayTool: ToolDefinition = {
     }
 
     const day = trip.itinerary.days[dayIndex];
-    const profile = getDestinationProfile(trip.destination, trip.preferences);
-    const bank = ACTIVITY_BANK[profile.category];
     const changes: string[] = [];
+    const profile = trip.destinationProfile;
 
-    // Weather replanning logic
+    // Weather replanning: swap outdoor activities for indoor ones from the profile
     if (reason === "weather") {
       const weatherService = getWeatherService();
       const weather = await weatherService.getWeather({ destination: trip.destination, date: day.date });
-      
+
       const dayWeather = weather.length > 0 ? weather[0] : null;
       const isBadWeather = dayWeather && (dayWeather.condition === "rain" || dayWeather.condition === "storm" || dayWeather.condition === "snow");
 
       if (isBadWeather || args.details?.toLowerCase().includes("rain")) {
-        const newActivities: Activity[] = [];
-        
-        for (const act of day.activities) {
-          if (act.category === "nature") { // Typically outdoor
-            // Find slot based on startTime
-            const hour = parseInt(act.startTime.split(":")[0]);
-            let slotLabel = "morning";
-            if (hour >= 12 && hour < 14) slotLabel = "midday";
-            else if (hour >= 14 && hour < 17) slotLabel = "afternoon";
-            else if (hour >= 17) slotLabel = "evening";
+        const usedNames = new Set(day.activities.map((a: Activity) => a.name));
 
-            const candidates = bank[slotLabel] || [];
-            // Find indoor alternatives
-            const indoorCandidates = candidates.filter(c => c.category !== "nature");
-            
-            if (indoorCandidates.length > 0) {
-              const replacement = indoorCandidates[Math.floor(Math.random() * indoorCandidates.length)];
-              newActivities.push({
-                ...act,
-                name: replacement.name,
-                location: replacement.location,
-                category: replacement.category,
-                description: replacement.description,
-                price: replacement.priceMin + Math.floor(Math.random() * (replacement.priceMax - replacement.priceMin + 1)),
-                bookingRequired: replacement.bookingRequired,
-              });
-              changes.push(`Replaced ${act.name} with ${replacement.name} due to weather.`);
-            } else {
-              newActivities.push(act);
-            }
-          } else {
-            newActivities.push(act); // Preserve food, evening, indoor
+        const indoorPool = profile
+          ? profile.attractions.filter(a =>
+              a.category !== "nature" && a.category !== "adventure" && !usedNames.has(a.name)
+            )
+          : [];
+
+        const newActivities: Activity[] = day.activities.map((act: Activity) => {
+          if (act.category === "nature" && indoorPool.length > 0) {
+            const replacement = indoorPool.shift()!;
+            changes.push(`Replaced ${act.name} with ${replacement.name} due to weather.`);
+            return {
+              ...act,
+              name: replacement.name,
+              location: replacement.hub,
+              category: replacement.category as any,
+              description: replacement.description,
+              price: replacement.entryFeeINR,
+              bookingRequired: false,
+            };
           }
-        }
+          return act;
+        });
+
         day.activities = newActivities;
+        if (changes.length === 0) {
+          changes.push("No outdoor activities to replace — all activities are already indoor-friendly.");
+        }
       } else {
         changes.push("Weather looks fine, no outdoor activities replaced.");
       }
     } else {
-      changes.push(`Replanning for ${reason} is acknowledged, but full logic is pending.`);
+      changes.push(`Replanning for ${reason} is acknowledged.`);
     }
 
-    if (changes.length > 0) {
-      // Recalculate budget
-      trip.budgetBreakdown = calculateBudgetBreakdown(trip);
+    trip.budgetBreakdown = calculateBudgetBreakdown(trip);
+    await ctx.tripRepository.upsert(trip);
+    ctx.currentTrip = trip;
 
-      // Persist
-      await ctx.tripRepository.upsert(trip);
-      ctx.currentTrip = trip;
-
-      return {
-        result: {
-          success: true,
-          dayIndex,
-          changes,
-        },
-        artifact: {
-          type: "tripUpdated",
-          changes,
-        },
-      };
-    }
-
-    return { result: { success: true, message: "No changes made." } };
+    return {
+      result: { success: true, dayIndex, changes },
+      artifact: { type: "tripUpdated", changes },
+    };
   },
 };

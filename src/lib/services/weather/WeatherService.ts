@@ -52,7 +52,7 @@ export class WeatherService {
   }
 
   async getWeather(params: GetWeatherParams): Promise<WeatherForecast[]> {
-    const destination = params.destination || "Delhi"; // Fallback destination if none provided and no context
+    const destination = params.destination || "Destination"; // Fallback destination if none provided
     
     // 1. Resolve Coordinates
     const coords = await resolveCoords(destination);

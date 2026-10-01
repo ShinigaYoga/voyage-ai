@@ -1,3 +1,5 @@
+import type { DestinationProfile, ProfileStatus } from './services/destination/types';
+
 export type ActivityCategory = 'food' | 'culture' | 'nature' | 'nightlife' | 'transport' | 'rest' | 'shopping';
 
 export interface Activity {
@@ -12,6 +14,10 @@ export interface Activity {
   bookingRequired?: boolean;
   lat?: number;
   lon?: number;
+  imageUrl?: string; // illustrative image URL for the activity
+  imageAlt?: string;
+  imageSource?: string;
+  attribution?: string; // photo attribution/license string
 }
 
 export interface Day {
@@ -40,6 +46,7 @@ export interface Trip {
   id: string;
   name: string;
   destination: string;
+  destinationCoords?: { lat: number; lon: number };
   travelers: number;
   budget?: string;
   dates?: string;
@@ -48,12 +55,31 @@ export interface Trip {
     days: Day[];
   };
   budgetBreakdown?: BudgetBreakdown;
-  bookings?: any[];
+  budgetRecommendations?: string[];
+  bookings?: Booking[];
   notes?: string;
   transport?: any;
   selectedHotel?: { id: string; name?: string; lat?: number; lon?: number; [key: string]: any };
+  // AI-researched destination knowledge (cached in IDB, populated on trip creation)
+  destinationProfile?: DestinationProfile;
+  profileStatus?: ProfileStatus;
   createdAt: number;
   updatedAt: number;
+}
+
+export type BookingStatus = 'draft' | 'pending' | 'confirmed' | 'failed' | 'cancelled';
+
+export interface Booking {
+  id: string;
+  tripId: string;
+  itemId: string;
+  itemType: string; // 'hotel' | 'flight' | 'train' | 'bus' | 'activity' | 'restaurant' | etc.
+  price: number;
+  status: string;
+  message?: string;
+  confirmationCode?: string;
+  details?: any;
+  createdAt: number;
 }
 
 export type MessageType =
@@ -68,7 +94,10 @@ export type MessageType =
   | "activity"
   | "booking"
   | "food"
-  | "weather";
+  | "weather"
+  | "transport_comparison"
+  | "transport_planning"
+  | "unified_transport";
 
 export interface MessageBase {
   id: string;
@@ -105,6 +134,27 @@ export interface ActivityMessage extends MessageBase { type: "activity"; activit
 export interface BookingMessage extends MessageBase { type: "booking"; booking: any; }
 export interface FoodMessage extends MessageBase { type: "food"; dishes: any[]; }
 export interface WeatherMessage extends MessageBase { type: "weather"; destination: string; forecasts: any[]; summary: string; }
+export interface TransportComparisonMessage extends MessageBase { 
+  type: "transport_comparison"; 
+  comparisons: { date: string; options: any[] }[]; 
+  origin: string; 
+  destination: string; 
+}
+export interface TransportPlanningMessage extends MessageBase {
+  type: "transport_planning";
+  origin: string;
+  destination: string;
+  departureDate: string;
+  plans: any[];
+}
+export interface UnifiedTransportMessage extends MessageBase {
+  type: "unified_transport";
+  origin: string;
+  destination: string;
+  departureDate?: string;
+  plans?: any[];
+  options: any[];
+}
 
 export type Message =
   | TextMessage
@@ -118,7 +168,10 @@ export type Message =
   | ActivityMessage
   | BookingMessage
   | FoodMessage
-  | WeatherMessage;
+  | WeatherMessage
+  | TransportComparisonMessage
+  | TransportPlanningMessage
+  | UnifiedTransportMessage;
 
 type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never;
 

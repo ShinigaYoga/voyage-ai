@@ -1,5 +1,6 @@
 import { Hotel } from "../types";
 import { resolveCoords, DESTINATION_COORDS } from "../../weather";
+import { getHotelImageUrl } from "@/lib/images/activityImage";
 
 // Deterministic coordinate offset (up to ~8km)
 function hashToOffset8km(str: string): { dLat: number, dLon: number } {
@@ -68,7 +69,8 @@ function generateDeterministicHotels(destination: string, centerLat: number, cen
       amenities: ["Pool", "Wifi", "Breakfast"], 
       distanceFromCenter: dist,
       lat: Number((centerLat + dLat).toFixed(5)),
-      lon: Number((centerLon + dLon).toFixed(5))
+      lon: Number((centerLon + dLon).toFixed(5)),
+      imageUrl: getHotelImageUrl(nameSuffix, destination),
     };
   };
 

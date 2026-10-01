@@ -28,7 +28,7 @@ export function MessageBubble({ message }: { message: Message }) {
               rounded-card px-5 py-4
               ${isUser
                 ? "bg-sage-600 text-white rounded-tr-none"
-                : "bg-cream-100 dark:bg-cream-200 text-ink-900 shadow-soft rounded-tl-none border border-cream-200"
+                : "bg-cream-100  text-ink-900 shadow-soft rounded-tl-none border border-cream-200"
               }
             `}
           >

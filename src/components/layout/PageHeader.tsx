@@ -25,7 +25,7 @@ export function PageHeader({ title, showBack = false, rightAction }: PageHeaderP
             aria-label="Go back"
           />
         )}
-        <h1 className="text-2xl font-display font-bold text-ink-900 dark:text-[#F5F5F3]">{title}</h1>
+        <h1 className="text-2xl font-display font-bold text-ink-900 ">{title}</h1>
       </div>
       {rightAction && <div>{rightAction}</div>}
     </header>

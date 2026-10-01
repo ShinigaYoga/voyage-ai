@@ -1,10 +1,10 @@
 import { TransportService } from "./TransportService";
-import { LocalTransportProvider } from "./providers/LocalTransportProvider";
+import { EstimateTransportProvider } from "./providers/EstimateTransportProvider";
 
 export * from "./types";
 export * from "./TransportService";
 export * from "./scorer";
 
 export function getTransportService(): TransportService {
-  return new LocalTransportProvider();
+  return new EstimateTransportProvider();
 }

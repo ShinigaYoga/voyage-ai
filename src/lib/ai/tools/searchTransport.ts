@@ -33,13 +33,8 @@ export const searchTransportTool: ToolDefinition = {
       trip = ctx.currentTrip;
     }
 
-    let origin = args.origin;
-    if (!origin) {
-      // Server-side: cannot use IndexedDB; default to Delhi
-      origin = "Delhi";
-    }
-
-    const destination = args.destination || trip?.destination || "Goa";
+    let origin = args.origin || trip?.name?.split(" to ")[0] || "Origin";
+    const destination = args.destination || trip?.destination || "Destination";
     const service = getTransportService();
     const rawOptions = await service.search({
       origin,
@@ -60,9 +55,8 @@ export const searchTransportTool: ToolDefinition = {
         optionsCount: scored.length,
         options: scored,
       },
-      // Emit a transport artifact so the client renders the card UI
       artifact: {
-        type: "transport",
+        type: "unified_transport",
         tripId: args.tripId,
         options: scored,
         origin,

@@ -9,7 +9,8 @@ import { ServerTripRepository, ServerMessageRepository } from "@/lib/repositorie
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { tripId, message, history = [] } = body;
+    // tripData is the full Trip object sent by the client (from IndexedDB — source of truth)
+    const { tripId, message, history = [], tripData } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -18,17 +19,25 @@ export async function POST(req: Request) {
     const tripRepo = new ServerTripRepository();
     const msgRepo = new ServerMessageRepository();
 
-    // Ensure the trip is loaded from server memory before running
+    // Seed server memory from client-sent trip data (IndexedDB is authoritative).
+    // This ensures cold starts / serverless instances always have the trip available.
+    if (tripData && tripData.id) {
+      await tripRepo.upsert(tripData);
+    }
+
+    // Now load trip from server memory (will exist if client sent it above)
     const currentTrip = tripId ? await tripRepo.get(tripId) : null;
+
+    const aiProvider = getAIProvider();
 
     const toolContext = {
       tripId,
       tripRepository: tripRepo,
       messageRepository: msgRepo,
       currentTrip,
+      aiProvider,
     };
 
-    const aiProvider = getAIProvider();
     const agent = new Agent(aiProvider, toolRegistry, toolContext);
 
     // Build AIMessage array

@@ -4,7 +4,7 @@ import { GroqProvider } from "./providers/GroqProvider";
 import { FallbackProvider } from "./providers/FallbackProvider";
 import { MockAIProvider } from "./providers/MockAIProvider";
 
-// Using gemini-3.6-flash as gemini-2.5-flash is restricted for new users
+// gemini-3.6-flash: GA model
 export const GEMINI_MODEL = "gemini-3.6-flash";
 
 function hasValidGeminiKey(value?: string): boolean {

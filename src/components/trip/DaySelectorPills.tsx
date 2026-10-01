@@ -45,7 +45,7 @@ export function DaySelectorPills({ days, activeDay, onSelect }: DaySelectorPills
               w-20 h-20 rounded-2xl border transition-all duration-300
               ${isActive 
                 ? 'bg-sage-600 border-sage-700 shadow-md text-white scale-105' 
-                : 'bg-white dark:bg-cream-200 border-cream-200 text-ink-700 hover:border-sage-300 hover:bg-sage-50 dark:hover:bg-sage-900/30'
+                : 'bg-white  border-cream-200 text-ink-700 hover:border-sage-300 hover:bg-sage-50 '
               }
             `}
           >

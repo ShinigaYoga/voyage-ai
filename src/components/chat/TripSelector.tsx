@@ -33,7 +33,7 @@ export function TripSelector({ currentTrip, trips, onSelect, onCreateNew }: Trip
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white dark:bg-cream-200 rounded-cardLg shadow-float border border-cream-200 z-50 overflow-hidden py-2">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white  rounded-cardLg shadow-float border border-cream-200 z-50 overflow-hidden py-2">
             <div className="max-h-60 overflow-y-auto">
               {trips.map(trip => (
                 <button

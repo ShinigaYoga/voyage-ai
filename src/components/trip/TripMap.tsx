@@ -6,7 +6,7 @@ import { Map } from 'lucide-react';
 const DynamicMap = dynamic(() => import('./MapComponent'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-75 bg-cream-100 dark:bg-ink-800 animate-pulse rounded-cardLg flex items-center justify-center text-ink-500">
+    <div className="w-full h-full min-h-75 bg-cream-100  animate-pulse rounded-cardLg flex items-center justify-center text-ink-500">
       Loading Map...
     </div>
   )
@@ -16,6 +16,7 @@ interface TripMapProps {
   activities: Activity[];
   originCoords?: { lat: number; lon: number } | null;
   destination: string;
+  destinationCoords?: { lat: number; lon: number } | null;
   activeActivityId?: string | null;
   onActivitySelect?: (id: string) => void;
 }

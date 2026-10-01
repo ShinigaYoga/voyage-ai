@@ -52,7 +52,7 @@ export function BudgetCard({ breakdown, onSetBudget, className = "", trip }: Bud
                 value={customBudget}
                 onChange={e => setCustomBudget(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSaveBudget()}
-                className="w-28 px-3 py-1.5 text-xs border border-sage-300 rounded-lg outline-none focus:border-sage-500 bg-cream-50 dark:bg-cream-200 text-ink-900"
+                className="w-28 px-3 py-1.5 text-xs border border-sage-300 rounded-lg outline-none focus:border-sage-500 bg-cream-50  text-ink-900"
                 autoFocus
               />
               <button
@@ -71,7 +71,7 @@ export function BudgetCard({ breakdown, onSetBudget, className = "", trip }: Bud
           ) : (
             <button
               onClick={() => setIsEditingBudget(true)}
-              className="px-3 py-1.5 text-xs font-semibold bg-cream-100 dark:bg-cream-200 text-sage-800 border border-cream-200 rounded-lg hover:bg-cream-200 dark:hover:bg-cream-200 transition-colors shrink-0"
+              className="px-3 py-1.5 text-xs font-semibold bg-cream-100  text-sage-800 border border-cream-200 rounded-lg hover:bg-cream-200  transition-colors shrink-0"
             >
               Set Budget
             </button>
@@ -149,6 +149,42 @@ export function BudgetCard({ breakdown, onSetBudget, className = "", trip }: Bud
 
         {expanded && (
           <div className="mt-6 pt-5 border-t border-cream-200 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-cream-100">
+              <span className="text-xs font-semibold text-ink-500 uppercase tracking-wider">Category Breakdown (Estimated)</span>
+              {isEditingBudget ? (
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="number"
+                    placeholder="e.g. 30000"
+                    value={customBudget}
+                    onChange={e => setCustomBudget(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSaveBudget()}
+                    className="w-24 px-2 py-1 text-xs border border-sage-300 rounded outline-none bg-cream-50 text-ink-900"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveBudget}
+                    className="px-2.5 py-1 text-xs font-semibold bg-sage-600 text-white rounded hover:bg-sage-700 transition-colors"
+                  >
+                    Replan
+                  </button>
+                  <button
+                    onClick={() => setIsEditingBudget(false)}
+                    className="px-1.5 py-1 text-xs text-ink-500 hover:text-ink-900"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsEditingBudget(true); }}
+                  className="px-2.5 py-1 text-xs font-medium text-sage-800 bg-cream-100 border border-cream-300 rounded hover:bg-cream-200 transition-colors"
+                >
+                  Edit Budget & Replan
+                </button>
+              )}
+            </div>
+
             <BreakdownRow label="Transport" amount={breakdown.transport} color="bg-sky-400" />
             <BreakdownRow label="Accommodation" amount={breakdown.hotel} color="bg-indigo-400" />
             <BreakdownRow label="Food & Dining" amount={breakdown.food} color="bg-coral-400" />
@@ -158,11 +194,22 @@ export function BudgetCard({ breakdown, onSetBudget, className = "", trip }: Bud
 
             <button
               onClick={(e) => { e.stopPropagation(); setShowExpenditure(true); }}
-              className="flex items-center gap-2 text-xs text-sage-700 dark:text-sage-400 font-semibold hover:text-sage-900 transition-colors mt-2 pt-2 border-t border-cream-200 w-full"
+              className="flex items-center gap-2 text-xs text-sage-700 font-semibold hover:text-sage-900 transition-colors mt-2 pt-2 border-t border-cream-200 w-full"
             >
               <List size={14} />
               See entire list
             </button>
+            {/* Budget Recommendations Section */}
+            {Array.isArray((trip && trip.budgetRecommendations) || []) && ((trip && trip.budgetRecommendations) || []).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-cream-100">
+                <div className="text-sm font-bold text-ink-800 mb-2">Budget Recommendations</div>
+                <ul className="list-disc list-inside text-sm text-ink-700 space-y-1">
+                  {((trip && trip.budgetRecommendations) || []).map((r: string, i: number) => (
+                    <li key={`rec-${i}`}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </Card>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { MessageType } from "@/lib/types";
 
 export const ALL_FILTER_TYPES: MessageType[] = [
-  "text", "trip", "tripUpdated", "transport", "hotel", "restaurant", "attraction", "itinerary", "activity", "booking", "food", "weather"
+  "text", "trip", "tripUpdated", "transport", "transport_comparison", "transport_planning", "unified_transport", "hotel", "restaurant", "attraction", "itinerary", "activity", "booking", "food", "weather"
 ];
 
 const FILTER_LABELS: Record<MessageType, string> = {
@@ -10,6 +10,9 @@ const FILTER_LABELS: Record<MessageType, string> = {
   trip: "Trip cards",
   tripUpdated: "Trip updates",
   transport: "Transport",
+  transport_comparison: "Price Comparison",
+  transport_planning: "Transport Plan",
+  unified_transport: "Transport Planner",
   hotel: "Hotels",
   restaurant: "Restaurants",
   attraction: "Attractions",
@@ -59,7 +62,7 @@ export function MessageFilterPopover({ isOpen, onClose, activeFilters, onChange 
   return (
     <div 
       ref={popoverRef}
-      className="absolute top-14 right-4 w-64 bg-white dark:bg-cream-200 rounded-card shadow-float border border-cream-200 z-50 overflow-hidden"
+      className="absolute top-14 right-4 w-64 bg-white  rounded-card shadow-float border border-cream-200 z-50 overflow-hidden"
     >
       <div className="p-3 border-b border-cream-100 bg-cream-50 font-semibold text-ink-900 text-sm">
         Filter Messages

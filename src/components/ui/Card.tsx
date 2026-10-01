@@ -13,9 +13,9 @@ export function Card({
   const baseStyles = "rounded-[var(--radius-card)] overflow-hidden transition-shadow";
   
   const variants = {
-    default: "bg-[#FDFBF7] dark:bg-[#1C1C1A] shadow-[var(--shadow-soft)]",
-    elevated: "bg-white dark:bg-[#2C2C28] shadow-[var(--shadow-lift)]",
-    outlined: "bg-transparent border border-[var(--color-cream-200)] dark:border-white/10",
+    default: "bg-[#FDFBF7]  shadow-[var(--shadow-soft)]",
+    elevated: "bg-white  shadow-[var(--shadow-lift)]",
+    outlined: "bg-transparent border border-[var(--color-cream-200)] ",
   };
 
   return (

@@ -76,7 +76,7 @@ function GuideChatBubble({ msg, tripId }: { msg: GuideMessage; tripId?: string }
             className={`rounded-card px-5 py-4 ${
               isUser
                 ? "bg-sage-600 text-white rounded-tr-none"
-                : "bg-cream-100 dark:bg-cream-200 text-ink-900 shadow-soft rounded-tl-none border border-cream-200"
+                : "bg-cream-100  text-ink-900 shadow-soft rounded-tl-none border border-cream-200"
             }`}
           >
             <MessageRenderer message={asMessage as Message} />
@@ -95,7 +95,7 @@ function LoadingBubble() {
     <div className="flex justify-start mb-5">
       <div className="flex gap-3">
         <Avatar size="sm" fallback="VG" />
-        <div className="bg-cream-100 dark:bg-cream-200 rounded-card rounded-tl-none px-5 py-4 border border-cream-200 shadow-soft">
+        <div className="bg-cream-100  rounded-card rounded-tl-none px-5 py-4 border border-cream-200 shadow-soft">
           <div className="flex gap-1.5 items-center h-5">
             {[0, 1, 2].map((i) => (
               <div
@@ -333,9 +333,9 @@ function GuidePageContent() {
     : destination;
 
   return (
-    <div className="flex flex-col h-[100dvh] md:h-[calc(100vh-2rem)] md:mt-4 md:rounded-cardLg md:border border-cream-200 bg-cream-50 dark:bg-[#141412] overflow-hidden relative">
+    <div className="flex flex-col h-[100dvh] md:h-[calc(100vh-2rem)] md:mt-4 md:rounded-cardLg md:border border-cream-200 bg-cream-50  overflow-hidden relative">
       {/* Header */}
-      <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-cream-50/90 dark:bg-[#141412]/90 backdrop-blur-md border-b border-cream-200">
+      <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-cream-50/90  backdrop-blur-md border-b border-cream-200">
         <IconButton
           icon={<ArrowLeft size={20} />}
           variant="ghost"
@@ -347,7 +347,7 @@ function GuidePageContent() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-lg">🧭</span>
-            <h1 className="font-display font-bold text-ink-900 dark:text-[#F5F5F3] text-base truncate">
+            <h1 className="font-display font-bold text-ink-900  text-base truncate">
               Voyage Ranger
             </h1>
           </div>
@@ -366,9 +366,9 @@ function GuidePageContent() {
 
         {/* Context badge on the right */}
         {destination && (
-          <div className="shrink-0 flex items-center gap-1.5 bg-sage-50 dark:bg-sage-100/20 border border-sage-200 dark:border-sage-300/30 px-3 py-1.5 rounded-pill">
+          <div className="shrink-0 flex items-center gap-1.5 bg-sage-50  border border-sage-200  px-3 py-1.5 rounded-pill">
             <Compass size={13} className="text-sage-600" />
-            <span className="text-xs font-semibold text-sage-800 dark:text-sage-300 truncate max-w-[100px]">
+            <span className="text-xs font-semibold text-sage-800  truncate max-w-[100px]">
               {destination}
             </span>
           </div>
@@ -399,7 +399,7 @@ function GuidePageContent() {
                   key={qp.label}
                   onClick={() => sendMessage(qp.label)}
                   disabled={loading || !destination}
-                  className="flex items-center gap-2 text-left px-3 py-3 rounded-card bg-cream-100 dark:bg-cream-200 border border-cream-200 hover:border-sage-300 hover:bg-sage-50 dark:hover:bg-sage-100/20 transition-colors text-sm text-ink-700 font-medium shadow-soft disabled:opacity-40"
+                  className="flex items-center gap-2 text-left px-3 py-3 rounded-card bg-cream-100  border border-cream-200 hover:border-sage-300 hover:bg-sage-50  transition-colors text-sm text-ink-700 font-medium shadow-soft disabled:opacity-40"
                 >
                   <span className="text-base shrink-0">{qp.icon}</span>
                   <span className="text-xs leading-snug">{qp.label}</span>
@@ -432,7 +432,7 @@ function GuidePageContent() {
               key={qp.label}
               onClick={() => sendMessage(qp.label)}
               disabled={loading}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-cream-100 dark:bg-cream-200 border border-cream-200 hover:border-sage-300 transition-colors text-xs text-ink-700 font-medium whitespace-nowrap"
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-pill bg-cream-100  border border-cream-200 hover:border-sage-300 transition-colors text-xs text-ink-700 font-medium whitespace-nowrap"
             >
               <span>{qp.icon}</span>
               {qp.label}
@@ -442,8 +442,8 @@ function GuidePageContent() {
       )}
 
       {/* Input bar */}
-      <div className="sticky bottom-0 z-10 w-full bg-cream-100 dark:bg-[#1C1C1A] p-4 pb-safe-bottom border-t border-cream-200">
-        <div className="max-w-4xl mx-auto flex items-center gap-2 bg-cream-50 dark:bg-cream-200 rounded-pill p-2 shadow-sm border border-transparent focus-within:border-sage-400 focus-within:ring-2 focus-within:ring-sage-200 transition-all">
+      <div className="sticky bottom-0 z-10 w-full bg-cream-100  p-4 pb-safe-bottom border-t border-cream-200">
+        <div className="max-w-4xl mx-auto flex items-center gap-2 bg-cream-50  rounded-pill p-2 shadow-sm border border-transparent focus-within:border-sage-400 focus-within:ring-2 focus-within:ring-sage-200 transition-all">
           <input
             type="text"
             value={inputText}

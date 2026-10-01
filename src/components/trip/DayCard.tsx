@@ -8,10 +8,12 @@ import { Card } from "../ui/Card";
 
 import { getDistanceService, DistanceResult } from "@/lib/services/distance";
 import { resolveActivityCoords } from "@/lib/itinerary/coordinateUtils";
+import { usePlaceImages } from "@/lib/hooks/usePlaceImages";
 
 interface DayCardProps {
   day: Day;
   destination?: string;
+  destinationCoords?: { lat: number; lon: number } | null;
   originCoords?: { lat: number; lon: number; label?: string } | null;
   activeActivityId?: string | null;
   onActivitySelect?: (id: string) => void;
@@ -19,7 +21,7 @@ interface DayCardProps {
   onRemoveActivity?: (id: string) => void;
 }
 
-export function DayCard({ day, destination, originCoords, activeActivityId, onActivitySelect, onEditActivity, onRemoveActivity }: DayCardProps) {
+export function DayCard({ day, destination, destinationCoords, originCoords, activeActivityId, onActivitySelect, onEditActivity, onRemoveActivity }: DayCardProps) {
   const [expanded, setExpanded] = useState(true);
 
   // Format date if available, otherwise just "Day X"
@@ -34,10 +36,13 @@ export function DayCard({ day, destination, originCoords, activeActivityId, onAc
   let totalKm = 0;
   let totalMin = 0;
 
+  // Enrich activities with images lazily on render
+  const enrichedActivities = usePlaceImages(day.activities, "attraction", destination || "");
+
   // Resolve coords for each activity (uses stored lat/lon or deterministic fallback)
-  const resolvedActivities = day.activities.map(act => ({
+  const resolvedActivities = enrichedActivities.map(act => ({
     act,
-    coords: resolveActivityCoords(act.name, act.lat, act.lon, destination || ""),
+    coords: resolveActivityCoords(act.name, act.lat, act.lon, destination || "", destinationCoords),
   }));
 
   const activitiesWithDistances = resolvedActivities.map(({ act, coords }, idx) => {
@@ -104,7 +109,7 @@ export function DayCard({ day, destination, originCoords, activeActivityId, onAc
 
       {/* Content */}
       {expanded && (
-        <div className="p-5 pt-6 bg-white dark:bg-cream-200 border-t border-cream-100 dark:border-cream-300">
+        <div className="p-5 pt-6 bg-white  border-t border-cream-100 ">
           {day.activities.length === 0 ? (
             <div className="text-center py-8 text-ink-400 text-sm">
               No activities planned for this day yet.

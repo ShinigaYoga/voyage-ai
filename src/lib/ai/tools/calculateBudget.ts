@@ -1,4 +1,5 @@
 import { ToolDefinition } from "./types";
+import { calculateBudgetBreakdown, adjustItineraryForBudget, parseBudgetValue } from "@/lib/budget/engine";
 
 export const calculateBudgetTool: ToolDefinition = {
   name: 'calculateBudget',
@@ -7,27 +8,43 @@ export const calculateBudgetTool: ToolDefinition = {
     type: 'object',
     properties: {
       tripId: { type: 'string', description: 'Trip ID to calculate budget for' },
+      newBudget: { type: 'number', description: 'Optional new budget amount in INR to apply to the trip' },
     },
   },
   execute: async (args, ctx) => {
     const id = args.tripId || ctx.tripId;
-    const trip = id ? await ctx.tripRepository.get(id) : ctx.currentTrip;
+    let trip = id ? await ctx.tripRepository.get(id) : ctx.currentTrip;
 
-    const baseBudget = trip?.budget ? parseInt(trip.budget.replace(/[^0-9]/g, "")) || 25000 : 25000;
-    const travelers = trip?.travelers || 2;
+    if (!trip) {
+      throw new Error("No active trip found to calculate budget for.");
+    }
 
-    const breakdown = {
-      stayEstimate: Math.round(baseBudget * 0.45),
-      activitiesEstimate: Math.round(baseBudget * 0.30),
-      foodEstimate: Math.round(baseBudget * 0.25),
-      transportEstimate: 0,
-      totalEstimated: baseBudget,
-      travelersCount: travelers,
-      perPersonEstimate: Math.round(baseBudget / travelers),
-    };
+    if (typeof args.newBudget === 'number' && args.newBudget > 0) {
+      trip.budget = `₹${args.newBudget.toLocaleString('en-IN')}`;
+    }
+
+    const { updatedTrip, adjustments, breakdown } = adjustItineraryForBudget(trip, trip.destinationProfile);
+    await ctx.tripRepository.upsert(updatedTrip);
+    ctx.currentTrip = updatedTrip;
+
+    const budgetVal = parseBudgetValue(updatedTrip.budget);
+    const isOver = breakdown.status === 'over';
+    const statusText = isOver
+      ? `Over budget by ₹${Math.abs(breakdown.remaining).toLocaleString('en-IN')}`
+      : `₹${breakdown.remaining.toLocaleString('en-IN')} remaining`;
+
+    const summaryLines = [
+      `💰 Budget Estimate for ${updatedTrip.destination} (${updatedTrip.travelers} traveler${updatedTrip.travelers > 1 ? 's' : ''}):`,
+      `Total estimated cost is ₹${breakdown.total.toLocaleString('en-IN')}${budgetVal > 0 ? ` of ₹${budgetVal.toLocaleString('en-IN')} (${statusText})` : ''}.`,
+      adjustments.length > 0 ? `Adjustments: ${adjustments.join(' ')}` : `Your plan fits comfortably within your budget limits.`
+    ];
 
     return {
-      result: { breakdown, summary: `Total estimated budget is ₹${baseBudget.toLocaleString('en-IN')} for ${travelers} travelers (₹${breakdown.perPersonEstimate.toLocaleString('en-IN')}/person).` },
+      result: {
+        breakdown,
+        adjustments,
+        summary: summaryLines.join('\n'),
+      },
     };
   },
 };

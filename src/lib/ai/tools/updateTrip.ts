@@ -1,4 +1,5 @@
 import { ToolDefinition } from "./types";
+import { adjustItineraryForBudget } from "@/lib/budget/engine";
 
 export const updateTripTool: ToolDefinition = {
   name: 'updateTrip',
@@ -40,7 +41,12 @@ export const updateTripTool: ToolDefinition = {
       changes.push(`Budget updated to ${patch.budget}`);
     }
 
-    const updatedTrip = await ctx.tripRepository.update(id, patch);
+    let updatedTrip = await ctx.tripRepository.update(id, patch);
+
+    if (args.budget !== undefined || args.travelers !== undefined || args.dates) {
+      const adjusted = adjustItineraryForBudget(updatedTrip, updatedTrip.destinationProfile);
+      updatedTrip = await ctx.tripRepository.upsert(adjusted.updatedTrip);
+    }
 
     return {
       result: { trip: updatedTrip, changes },

@@ -8,4 +8,6 @@ export type Attraction = {
   location: string;
   imageUrl?: string;
   rating: number;
+  imageAlt?: string;
+  imageSource?: string;
 };

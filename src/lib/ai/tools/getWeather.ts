@@ -19,7 +19,7 @@ export const getWeatherTool: ToolDefinition = {
     },
   },
   async execute(args: { destination?: string; date?: string }, ctx) {
-    const destination = args.destination || ctx.currentTrip?.destination || "Delhi";
+    const destination = args.destination || ctx.currentTrip?.destination || "Destination";
 
     try {
       const service = getWeatherService();

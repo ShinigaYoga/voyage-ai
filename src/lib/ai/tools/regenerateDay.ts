@@ -22,9 +22,10 @@ export const regenerateDayTool: ToolDefinition = {
 
     const dayIdx = Number(args.dayIndex);
 
-    // Generate a full itinerary with a seed offset to produce a different day
+    // Generate a full itinerary with a seed offset (by tweaking the id) to produce a different day
     const offset = Math.floor(Date.now() / 1000) % 1000; // Time-based variety
-    const freshDays = generateItinerary({ ...trip, dates: (trip.dates || '') + offset });
+    if (!trip.destinationProfile) return { result: { error: 'Destination profile missing.' } };
+    const freshDays = generateItinerary({ ...trip, id: (trip.id || '') + `_regen_${offset}` }, trip.destinationProfile);
     const newDay = freshDays[dayIdx] ?? freshDays[0];
     newDay.dayIndex = dayIdx;
     if (trip.itinerary.days[dayIdx]?.date) {

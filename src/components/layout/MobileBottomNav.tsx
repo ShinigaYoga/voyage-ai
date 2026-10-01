@@ -17,7 +17,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-[#141412]/95 border-t border-cream-200 dark:border-white/10 px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95  border-t border-cream-200  px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(15,23,42,0.08)] z-50">
       <ul className="flex items-center justify-between">
         {navItems.map((item) => {
           const isActive = pathname?.startsWith(item.href);
@@ -41,7 +41,7 @@ export function MobileBottomNav() {
               <Link
                 href={item.href}
                 className={`flex flex-col items-center gap-1 p-2 transition-colors ${
-                  isActive ? "text-sage-600 dark:text-sage-400" : "text-ink-500 hover:text-ink-700"
+                  isActive ? "text-sage-600 " : "text-ink-500 hover:text-ink-700"
                 }`}
               >
                 <Icon size={24} className={isActive ? "stroke-[2.5px]" : "stroke-2"} />

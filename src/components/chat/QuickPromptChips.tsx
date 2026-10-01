@@ -25,7 +25,7 @@ export function QuickPromptChips({ onSelect, prompts, currentTrip }: QuickPrompt
       {activePrompts.map((prompt, i) => (
         <button
           key={i}
-          className="w-full text-left px-5 py-3 rounded-pill bg-cream-100 dark:bg-cream-200 border border-cream-200 text-sm font-medium text-ink-700 shadow-sm hover:shadow-soft hover:border-sage-300 transition-all active:scale-[0.99]"
+          className="w-full text-left px-5 py-3 rounded-pill bg-cream-100  border border-cream-200 text-sm font-medium text-ink-700 shadow-sm hover:shadow-soft hover:border-sage-300 transition-all active:scale-[0.99]"
           onClick={() => onSelect?.(prompt)}
         >
           {prompt}

@@ -30,20 +30,25 @@ export function resolveActivityCoords(
   activityName: string,
   activityLat: number | undefined,
   activityLon: number | undefined,
-  destination: string
+  destination: string,
+  destinationCoords?: { lat: number; lon: number } | null
 ): { lat: number; lon: number } | null {
   // Prefer stored coords if valid
   if (activityLat && activityLon && activityLat !== 0 && activityLon !== 0) {
     return { lat: activityLat, lon: activityLon };
   }
 
-  // Look up destination center (case-insensitive)
-  const entry = Object.entries(DESTINATION_COORDS).find(
-    ([k]) => k.toLowerCase() === destination.toLowerCase()
-  );
-  if (!entry) return null;
+  let center = destinationCoords;
 
-  const [, center] = entry;
+  if (!center) {
+    // Look up destination center (case-insensitive)
+    const entry = Object.entries(DESTINATION_COORDS).find(
+      ([k]) => k.toLowerCase() === destination.toLowerCase()
+    );
+    if (!entry) return null;
+    center = entry[1];
+  }
+
   const { dLat, dLon } = hashOffset(activityName + destination);
   return {
     lat: Number((center.lat + dLat).toFixed(5)),
@@ -58,6 +63,7 @@ export function resolveActivityCoords(
 export function resolveOriginCoords(
   trip: {
     destination?: string;
+    destinationCoords?: { lat: number; lon: number } | null;
     selectedHotel?: { lat?: number; lon?: number; name?: string };
     bookings?: any[];
   }
@@ -79,7 +85,12 @@ export function resolveOriginCoords(
     }
   }
 
-  // 3. Destination center fallback
+  // 3. Fallback to destinationCoords on trip
+  if (trip.destinationCoords && (trip.destinationCoords.lat !== 0 || trip.destinationCoords.lon !== 0)) {
+    return { lat: trip.destinationCoords.lat, lon: trip.destinationCoords.lon, label: "center" };
+  }
+
+  // 4. Destination center fallback (legacy hardcoded)
   if (!trip.destination) return null;
   const entry = Object.entries(DESTINATION_COORDS).find(
     ([k]) => k.toLowerCase() === trip.destination!.toLowerCase()

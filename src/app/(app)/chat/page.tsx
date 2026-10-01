@@ -191,6 +191,8 @@ function ChatPageContent() {
           tripId: activeTripId,
           message: text,
           attachments: attachments,
+          // Send full trip object so server can seed its memory on cold starts
+          tripData: currentTrip || undefined,
           // Send history snapshot (does NOT include the new userMsg — server adds it)
           history: messages,
         }),
@@ -267,6 +269,12 @@ function ChatPageContent() {
               });
               setMessages((prev) => [...prev, tripMsg]);
             } else if (artifact.type === "itinerary" && artifact.itinerary) {
+              // If the artifact carries the full trip (with itinerary), upsert it to IDB
+              if (artifact.trip) {
+                await tripRepo.upsert(artifact.trip);
+                setCurrentTrip(artifact.trip);
+                window.dispatchEvent(new CustomEvent("trip-updated", { detail: { trip: artifact.trip } }));
+              }
               const itineraryMsg = await msgRepo.create({
                 tripId: resolvedTripId,
                 role: "assistant" as const,
@@ -404,9 +412,9 @@ function ChatPageContent() {
   );
 
   return (
-    <div className="flex flex-col h-dvh md:h-[calc(100vh-2rem)] md:mt-4 md:rounded-cardLg md:border border-cream-200 bg-cream-50 dark:bg-[#141412] overflow-hidden relative">
+    <div className="flex flex-col h-dvh md:h-[calc(100vh-2rem)] md:mt-4 md:rounded-cardLg md:border border-cream-200 bg-cream-50  overflow-hidden relative">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-cream-50/90 dark:bg-[#141412]/90 backdrop-blur-md border-b border-cream-200">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-cream-50/90  backdrop-blur-md border-b border-cream-200">
         <div className="md:hidden">
           <IconButton icon={<ArrowLeft size={20} />} variant="ghost" onClick={() => router.back()} />
         </div>

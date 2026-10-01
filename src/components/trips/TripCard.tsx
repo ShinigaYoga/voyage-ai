@@ -7,7 +7,7 @@ import { Badge } from "../ui/Badge";
 export function TripCard({ trip }: { trip: Trip }) {
   return (
     <Link href={`/trip/${trip.id}`} className="block mb-4">
-      <div className="bg-white dark:bg-cream-200 rounded-card shadow-soft p-4 flex items-center gap-4 hover:shadow-lift transition-shadow">
+      <div className="bg-white  rounded-card shadow-soft p-4 flex items-center gap-4 hover:shadow-lift transition-shadow">
         <div className="w-16 h-16 rounded-2xl bg-sage-100 flex items-center justify-center shrink-0">
           <span className="text-2xl">🌍</span>
         </div>

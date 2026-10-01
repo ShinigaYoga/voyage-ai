@@ -61,7 +61,7 @@ export function WeatherCard({ forecasts, loading, error, compact = false }: Weat
           return (
             <div
               key={day.date}
-              className="flex flex-col items-center bg-white dark:bg-cream-200 rounded-lg px-3 py-2 shadow-xs border border-sky-100 dark:border-sky-900/30 shrink-0 min-w-16"
+              className="flex flex-col items-center bg-white  rounded-lg px-3 py-2 shadow-xs border border-sky-100  shrink-0 min-w-16"
             >
               <div className="text-xs text-ink-500 font-medium">{label.split(",")[0]}</div>
               <div className="text-xl my-1">{day.icon}</div>

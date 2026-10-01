@@ -186,7 +186,7 @@ export function ChatInput({ onSend, disabled = false, initialValue = "" }: ChatI
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-2">
             {attachments.map((att, idx) => (
-              <div key={idx} className="flex items-center gap-2 bg-white dark:bg-cream-200 border border-cream-200 rounded-lg p-1.5 pr-2 shadow-sm relative group max-w-[200px]">
+              <div key={idx} className="flex items-center gap-2 bg-white  border border-cream-200 rounded-lg p-1.5 pr-2 shadow-sm relative group max-w-[200px]">
                 <div className="w-8 h-8 rounded bg-cream-50 flex items-center justify-center shrink-0 overflow-hidden">
                   {att.type.startsWith('image/') ? (
                     <img src={att.url} alt={att.name} className="w-full h-full object-cover" />

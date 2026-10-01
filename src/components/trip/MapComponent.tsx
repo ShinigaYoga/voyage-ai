@@ -41,6 +41,7 @@ interface MapComponentProps {
   originCoords?: { lat: number; lon: number } | null;
   showLines?: boolean;
   destination: string;
+  destinationCoords?: { lat: number; lon: number } | null;
   activeActivityId?: string | null;
   onActivitySelect?: (id: string) => void;
 }
@@ -53,7 +54,7 @@ function MapUpdater({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 }
 
-export default function MapComponent({ activities, originCoords, showLines = false, destination, activeActivityId, onActivitySelect }: MapComponentProps) {
+export default function MapComponent({ activities, originCoords, showLines = false, destination, destinationCoords, activeActivityId, onActivitySelect }: MapComponentProps) {
   const distanceService = getDistanceService();
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function MapComponent({ activities, originCoords, showLines = fal
     if (act.lat !== undefined && act.lon !== undefined && !isNaN(act.lat) && !isNaN(act.lon) && (act.lat !== 0 || act.lon !== 0)) {
       return act;
     }
-    const resolved = resolveActivityCoords(act.name, act.lat, act.lon, destination);
+    const resolved = resolveActivityCoords(act.name, act.lat, act.lon, destination, destinationCoords);
     if (resolved) {
       return { ...act, lat: resolved.lat, lon: resolved.lon };
     }
@@ -102,8 +103,8 @@ export default function MapComponent({ activities, originCoords, showLines = fal
   // If no valid points at all, show a default world view (or return a fallback)
   if (!hasOrigin && validActivities.length === 0) {
     return (
-      <div className="w-full h-full min-h-75 flex items-center justify-center bg-cream-100 dark:bg-ink-800 rounded-cardLg text-ink-500">
-        No locations to display on the map.
+      <div className="w-full h-full min-h-75 flex items-center justify-center bg-cream-100  rounded-cardLg text-ink-500">
+        Map view is unavailable for this arbitrary destination as its coordinates could not be found.
       </div>
     );
   }

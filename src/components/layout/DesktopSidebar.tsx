@@ -28,12 +28,12 @@ export function DesktopSidebar() {
   }, [pathname]);
 
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen bg-white dark:bg-[#141412] border-r border-cream-200 dark:border-white/10 fixed left-0 top-0 pt-8 pb-6 px-4">
+    <aside className="hidden md:flex flex-col w-64 h-screen bg-white  border-r border-cream-200  fixed left-0 top-0 pt-8 pb-6 px-4">
       <div className="flex items-center gap-3 px-4 mb-10">
         <div className="w-8 h-8 rounded-lg bg-sage-600 flex items-center justify-center text-white">
           <BrandCompass size={20} />
         </div>
-        <span className="font-display font-bold text-xl text-ink-900 dark:text-[#F5F5F3] tracking-tight">VoyageAI</span>
+        <span className="font-display font-bold text-xl text-ink-900  tracking-tight">VoyageAI</span>
       </div>
 
       <nav className="flex-1">
@@ -48,8 +48,8 @@ export function DesktopSidebar() {
                   href={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-card transition-colors ${
                     isActive
-                      ? "bg-sage-100 dark:bg-sage-800/40 text-sage-800 dark:text-sage-300 font-semibold"
-                      : "text-ink-700 dark:text-[#D4D4D4] hover:bg-cream-200 dark:hover:bg-white/8 hover:text-ink-900 dark:hover:text-white"
+                      ? "bg-sage-100  text-sage-800  font-semibold"
+                      : "text-ink-700  hover:bg-cream-200  hover:text-ink-900 "
                   }`}
                 >
                   <Icon size={20} className={isActive ? "stroke-[2.5px]" : "stroke-2"} />
@@ -60,16 +60,16 @@ export function DesktopSidebar() {
           })}
 
           {lastTrip && (
-            <li className="mt-4 pt-4 border-t border-cream-200 dark:border-white/10">
+            <li className="mt-4 pt-4 border-t border-cream-200 ">
               <Link
                 href={`/trip/${lastTrip.id}`}
                 className={`flex items-center gap-3 px-4 py-3 rounded-card transition-colors ${
                   pathname?.includes(`/trip/${lastTrip.id}`)
-                    ? "bg-sage-100 dark:bg-sage-800/40 text-sage-800 dark:text-sage-300 font-semibold"
-                    : "text-ink-700 dark:text-[#D4D4D4] hover:bg-cream-200 dark:hover:bg-white/8 hover:text-ink-900 dark:hover:text-white"
+                    ? "bg-sage-100  text-sage-800  font-semibold"
+                    : "text-ink-700  hover:bg-cream-200  hover:text-ink-900 "
                 }`}
               >
-                <div className="w-5 h-5 rounded flex items-center justify-center bg-sage-200 dark:bg-sage-800/50 text-sage-700 dark:text-sage-400 text-xs shrink-0">
+                <div className="w-5 h-5 rounded flex items-center justify-center bg-sage-200  text-sage-700  text-xs shrink-0">
                   <Map size={12} />
                 </div>
                 <span className="truncate text-sm font-medium">Continue: {lastTrip.name}</span>

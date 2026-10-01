@@ -85,12 +85,17 @@ export class GroqProvider implements AIProvider {
       }
     }
 
-    const response = await this.ai.chat.completions.create({
+    const completionParams: any = {
       model: this.modelName,
       messages: groqMessages,
+      max_tokens: 6000,
+      ...(this.modelName.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
       tools: groqTools.length > 0 ? groqTools : undefined,
       tool_choice: groqTools.length > 0 ? "auto" : undefined,
-    });
+      ...(groqTools.length === 0 ? { response_format: { type: "json_object" } } : {}),
+    };
+
+    const response = await this.ai.chat.completions.create(completionParams);
 
     const elapsed = Date.now() - start;
     console.log(`[GroqProvider] ${this.modelName} responded in ${elapsed}ms`);

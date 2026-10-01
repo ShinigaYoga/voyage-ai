@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme inline {
   --color-cream-50: var(--val-cream-50, #FDFBF7);
   --color-cream-100: var(--val-cream-100, #FBF8F3);
@@ -79,41 +77,6 @@
   --foreground: var(--val-ink-900);
 }
 
-/* Dark mode: re-declare CSS variables so components using raw var(--color-*) get dark values */
-.dark {
-  --val-cream-50: #1C1C1A;
-  --val-cream-100: #141412;
-  --val-cream-200: #2C2C28;
-
-  --val-ink-500: #9E9E9E;
-  --val-ink-700: #D4D4D4;
-  --val-ink-900: #F5F5F3;
-
-  --val-sage-100: #243522;
-  --val-sage-200: #2F452C;
-  --val-sage-300: #4A6741;
-  --val-sage-400: #6B8E5A;
-  --val-sage-500: #7FA36B;
-  --val-sage-600: #98B885;
-  --val-sage-700: #B2CC9F;
-  --val-sage-800: #D2E8C0;
-
-  --val-coral-100: #3A2215;
-  --val-coral-300: #8B4A23;
-  --val-coral-400: #B85F35;
-  --val-coral-500: #D97A4A;
-  --val-coral-600: #F0B98A;
-
-  --val-sky-100: #192A33;
-  --val-sky-300: #427B91;
-
-  --val-blush-100: #331A14;
-  --val-blush-300: #8C4736;
-
-  --background: #141412;
-  --foreground: #F5F5F3;
-}
-
 /* Base styles */
 html {
   min-height: 100%;
@@ -125,11 +88,3 @@ body {
   font-family: var(--font-body);
   min-height: 100%;
 }
-
-/* Ensure dark mode covers the full html/body surface */
-html.dark,
-html.dark body {
-  background-color: #141412;
-  color: #F5F5F3;
-}
-

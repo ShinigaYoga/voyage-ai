@@ -23,6 +23,7 @@ import { ActivityRow } from './ActivityRow';
 import { GripVertical } from 'lucide-react';
 import { getDistanceService } from '@/lib/services/distance';
 import { resolveActivityCoords } from '@/lib/itinerary/coordinateUtils';
+import { usePlaceImages } from '@/lib/hooks/usePlaceImages';
 
 // Sortable item wrapper
 function SortableActivityItem({ 
@@ -145,6 +146,9 @@ export function DraggableActivityList({
     );
   }
 
+  // Enrich activities lazily with Wikipedia photos on render
+  const enrichedActivities = usePlaceImages(activities, "attraction", destination || "");
+
   return (
     <DndContext 
       sensors={sensors}
@@ -156,11 +160,11 @@ export function DraggableActivityList({
         strategy={verticalListSortingStrategy}
       >
         <div className="flex flex-col ml-3 md:ml-6 pt-4">
-          {activities.map((act, idx) => (
+          {enrichedActivities.map((act, idx) => (
             <SortableActivityItem 
               key={act.id} 
               activity={act} 
-              isLast={idx === activities.length - 1}
+              isLast={idx === enrichedActivities.length - 1}
               distanceLabel={distanceLabels[idx]}
               onEdit={onEditActivity}
               onRemove={onRemoveActivity}

@@ -6,14 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { IndexedDbUserRepository } from "@/lib/repositories/indexeddb/IndexedDbUserRepository";
 import { IndexedDbTripRepository } from "@/lib/repositories/indexeddb/IndexedDbTripRepository";
 import { UserProfile } from "@/lib/types";
-import { Camera, MapPin, Globe, Users, CreditCard, Bell, ChevronLeft, Sun } from "lucide-react";
+import { Camera, MapPin, Globe, Users, CreditCard, Bell, ChevronLeft } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useRouter } from "next/navigation";
-import { useTheme } from "@/lib/hooks/useTheme";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState({ trips: 0, places: 0 });
   const [isEditing, setIsEditing] = useState(false);
@@ -124,7 +122,7 @@ export default function ProfilePage() {
       </button>
 
       {/* Header */}
-      <div className="bg-white dark:bg-cream-200 rounded-cardLg p-6 md:p-8 shadow-sm border border-cream-200 mb-6 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+      <div className="bg-white  rounded-cardLg p-6 md:p-8 shadow-sm border border-cream-200 mb-6 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
         <div className="relative group">
           <Avatar size="xl" src={profile.avatarUrl} />
           <button 
@@ -195,7 +193,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Details */}
-      <div className="bg-white dark:bg-cream-200 rounded-cardLg shadow-sm border border-cream-200 overflow-hidden">
+      <div className="bg-white  rounded-cardLg shadow-sm border border-cream-200 overflow-hidden">
         <div className="p-6 border-b border-cream-100">
           <h3 className="font-display font-bold text-lg text-ink-900 mb-4">About Me</h3>
           {isEditing ? (
@@ -228,7 +226,7 @@ export default function ProfilePage() {
                 <select 
                   value={editForm.currency || "USD"}
                   onChange={e => setEditForm(prev => ({ ...prev, currency: e.target.value }))}
-                  className="bg-white dark:bg-cream-200 border border-cream-200 rounded p-1 text-sm outline-none"
+                  className="bg-white  border border-cream-200 rounded p-1 text-sm outline-none"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
@@ -256,7 +254,7 @@ export default function ProfilePage() {
                   min="1"
                   value={editForm.defaultTravelers || 2}
                   onChange={e => setEditForm(prev => ({ ...prev, defaultTravelers: parseInt(e.target.value) || 1 }))}
-                  className="bg-white dark:bg-cream-200 border border-cream-200 rounded p-1 text-sm w-16 text-center outline-none"
+                  className="bg-white  border border-cream-200 rounded p-1 text-sm w-16 text-center outline-none"
                 />
               ) : (
                 <div className="font-semibold text-ink-700">{profile.defaultTravelers}</div>
@@ -274,11 +272,11 @@ export default function ProfilePage() {
                 </div>
               </div>
               {isEditing ? (
-                <input 
+                  <input 
                   type="text"
                   value={editForm.travelStyles?.join(", ") || ""}
                   onChange={e => setEditForm(prev => ({ ...prev, travelStyles: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
-                  className="bg-white dark:bg-cream-200 border border-cream-200 rounded p-1 text-sm outline-none text-right max-w-[150px]"
+                  className="bg-white  border border-cream-200 rounded p-1 text-sm outline-none text-right w-36"
                   placeholder="e.g. Culture, Nature"
                 />
               ) : (
@@ -304,38 +302,12 @@ export default function ProfilePage() {
                     checked={editForm.notificationsEnabled}
                     onChange={e => setEditForm(prev => ({ ...prev, notificationsEnabled: e.target.checked }))}
                   />
-                  <div className="w-9 h-5 bg-cream-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cream-300 dark:after:border-cream-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sage-600"></div>
+                  <div className="w-9 h-5 bg-cream-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-cream-300  after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sage-600"></div>
                 </label>
               ) : (
                 <div className="font-semibold text-ink-700 text-sm">{profile.notificationsEnabled ? "On" : "Off"}</div>
               )}
             </div>
-            
-            <div className="flex items-center justify-between p-3 bg-cream-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-sage-100 text-sage-600 flex items-center justify-center">
-                  <Sun size={16} />
-                </div>
-                <div>
-                  <div className="font-medium text-ink-900 text-sm">App Theme</div>
-                  <div className="text-xs text-ink-500">Light, dark, or system mode</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 bg-white dark:bg-cream-200 p-1 rounded-lg border border-cream-200">
-                {(['light', 'dark', 'system'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTheme(t)}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-md capitalize transition-colors ${
-                      theme === t ? 'bg-sage-600 text-white shadow-xs' : 'text-ink-600 hover:text-ink-900'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
           </div>
         </div>
       </div>

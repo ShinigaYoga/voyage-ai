@@ -26,7 +26,7 @@ export const getTripTool: ToolDefinition = {
       const destKey = Object.keys(DESTINATION_COORDS).find(
         k => k.toLowerCase() === trip.destination?.toLowerCase()
       );
-      const center = destKey ? DESTINATION_COORDS[destKey] : null;
+      const center = trip.destinationCoords || (destKey ? DESTINATION_COORDS[destKey] : null);
       const origin = hotel?.lat && hotel?.lon
         ? { lat: hotel.lat, lon: hotel.lon, from: hotel.name || 'hotel' }
         : center

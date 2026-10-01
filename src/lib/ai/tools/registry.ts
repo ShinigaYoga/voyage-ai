@@ -12,6 +12,7 @@ import { addCustomActivityTool } from "./addCustomActivity";
 import { getWeatherTool } from "./getWeather";
 import { searchTransportTool } from "./searchTransport";
 import { compareTransportTool } from "./compareTransport";
+import { compareTransportDatesTool } from "./compareTransportDates";
 import { selectTransportTool } from "./selectTransport";
 import { searchHotelsTool } from "./searchHotels";
 import { searchRestaurantsTool } from "./searchRestaurants";
@@ -19,6 +20,7 @@ import { searchAttractionsTool } from "./searchAttractions";
 import { findNearbyPlacesTool } from "./findNearbyPlaces";
 import { bookItemTool } from "./bookItem";
 import { replanDayTool } from "./replanDay";
+import { planTransportTool } from "./planTransport";
 
 export const toolRegistry: Record<string, ToolDefinition> = {
   createTrip: createTripTool,
@@ -34,6 +36,7 @@ export const toolRegistry: Record<string, ToolDefinition> = {
   getWeather: getWeatherTool,
   searchTransport: searchTransportTool,
   compareTransport: compareTransportTool,
+  compareTransportDates: compareTransportDatesTool,
   selectTransport: selectTransportTool,
   searchHotels: searchHotelsTool,
   searchRestaurants: searchRestaurantsTool,
@@ -41,4 +44,5 @@ export const toolRegistry: Record<string, ToolDefinition> = {
   findNearbyPlaces: findNearbyPlacesTool,
   bookItem: bookItemTool,
   replanDay: replanDayTool,
+  planTransport: planTransportTool,
 };

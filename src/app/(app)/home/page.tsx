@@ -147,7 +147,7 @@ export default function HomePage() {
           
           {/* Search Dropdown */}
           {isSearchOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-cream-200 rounded-cardLg shadow-float border border-cream-200 overflow-hidden z-50 max-h-[300px] overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white  rounded-cardLg shadow-float border border-cream-200 overflow-hidden z-50 max-h-[300px] overflow-y-auto">
               {searchResults.length > 0 ? (
                 searchResults.map(dest => (
                   <Link 
@@ -202,7 +202,7 @@ export default function HomePage() {
                   <div className="text-xs font-semibold text-sage-600 mb-1">CONTINUE PLANNING</div>
                   <div className="font-display font-bold text-ink-900">{lastOpenedTripName || 'Your Trip'}</div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-white dark:bg-cream-200 flex items-center justify-center text-sage-600 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-white  flex items-center justify-center text-sage-600 shadow-sm">
                   <ChevronRight size={20} />
                 </div>
               </Card>
@@ -234,7 +234,7 @@ export default function HomePage() {
               <div className="flex overflow-x-auto md:grid md:grid-cols-2 gap-4 pb-4 hide-scrollbar">
                 {filteredDestinations.map((dest) => (
                   <Link key={dest.id} href={`/destination/${dest.slug}`} className="min-w-[160px] flex-shrink-0">
-                    <div className="flex items-center gap-3 bg-white dark:bg-cream-200 p-3 rounded-2xl shadow-sm border border-cream-200 hover:border-sage-300 transition-colors h-full">
+                    <div className="flex items-center gap-3 bg-white  p-3 rounded-2xl shadow-sm border border-cream-200 hover:border-sage-300 transition-colors h-full">
                       <div className="w-12 h-12 rounded-xl bg-cream-100 flex items-center justify-center text-2xl shrink-0">
                         {dest.image}
                       </div>

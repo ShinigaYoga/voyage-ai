@@ -50,7 +50,7 @@ export function ActivityEditSheet({ activity, isOpen, onClose, onSave }: Activit
       />
       
       <div className={`
-        fixed z-50 bg-white dark:bg-cream-200 shadow-float flex flex-col
+        fixed z-50 bg-white  shadow-float flex flex-col
         transition-transform duration-300 ease-out
         md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[480px] md:h-auto md:max-h-[90vh] md:rounded-cardLg
         bottom-0 left-0 right-0 h-[85vh] rounded-t-cardLg

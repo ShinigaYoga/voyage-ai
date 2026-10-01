@@ -24,6 +24,14 @@ interface VoyageDB extends DBSchema {
       data: any;
     };
   };
+  destination_profiles: {
+    key: string; // normalized destination name
+    value: {
+      destination: string;
+      profile: any; // DestinationProfile — typed as any to avoid circular import
+      cachedAt: number;
+    };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<VoyageDB>> | null = null;
@@ -50,7 +58,7 @@ function withTimeout<T>(promise: Promise<T>, ms = 5000): Promise<T> {
 }
 
 async function openDatabase(): Promise<IDBPDatabase<VoyageDB>> {
-  const db = await openDB<VoyageDB>("voyageai-db", 3, {
+  const db = await openDB<VoyageDB>("voyageai-db", 4, {
     upgrade(db, oldVersion, newVersion, transaction) {
       if (oldVersion < 1) {
         const tripStore = db.createObjectStore("trips", { keyPath: "id" });
@@ -64,6 +72,9 @@ async function openDatabase(): Promise<IDBPDatabase<VoyageDB>> {
       }
       if (oldVersion < 3) {
         db.createObjectStore("weather_cache", { keyPath: "id" });
+      }
+      if (oldVersion < 4) {
+        db.createObjectStore("destination_profiles", { keyPath: "destination" });
       }
     },
   });

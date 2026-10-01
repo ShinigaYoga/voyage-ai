@@ -21,7 +21,7 @@ export default function DestinationPage() {
 
   if (!destination) {
     return (
-      <div className="min-h-screen bg-cream-50 dark:bg-[#141412] flex flex-col">
+      <div className="min-h-screen bg-cream-50  flex flex-col">
         <PageHeader title="Not Found" showBack />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="text-4xl mb-4">🏜️</div>
@@ -60,7 +60,7 @@ export default function DestinationPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-cream-50 dark:bg-[#141412] pb-24 md:pb-12">
+    <div className="min-h-[100dvh] bg-cream-50  pb-24 md:pb-12">
       <PageHeader title={destination.name} showBack />
       
       <main className="max-w-4xl mx-auto px-4 md:px-8 mt-6">
@@ -90,7 +90,7 @@ export default function DestinationPage() {
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           {/* Left Column: Quick Stats & Facts */}
           <div className="md:col-span-1 flex flex-col gap-4">
-            <Card className="p-5 flex flex-col gap-4 bg-white dark:bg-cream-200 border border-cream-200 shadow-sm">
+            <Card className="p-5 flex flex-col gap-4 bg-white  border border-cream-200 shadow-sm">
               <h3 className="font-display font-bold text-ink-900 border-b border-cream-100 pb-2">Trip Overview</h3>
               <div className="flex items-center gap-3">
                 <Calendar className="text-sage-600 shrink-0" size={20} />
@@ -116,7 +116,7 @@ export default function DestinationPage() {
             </Card>
 
             {destination.quickFacts && destination.quickFacts.length > 0 && (
-              <Card className="p-5 bg-white dark:bg-cream-200 border border-cream-200 shadow-sm">
+              <Card className="p-5 bg-white  border border-cream-200 shadow-sm">
                 <h3 className="font-display font-bold text-ink-900 mb-3 border-b border-cream-100 pb-2">Quick Facts</h3>
                 <ul className="space-y-3">
                   {destination.quickFacts.map((fact, idx) => (
@@ -170,7 +170,7 @@ export default function DestinationPage() {
               <h2 className="text-2xl font-display font-bold text-ink-900 mb-4">Top Attractions</h2>
               <div className="grid sm:grid-cols-2 gap-4">
                 {destination.attractions.map((attraction, idx) => (
-                  <div key={idx} className="flex gap-4 p-4 bg-white dark:bg-cream-200 rounded-card shadow-sm border border-cream-200 items-start group hover:border-sage-300 transition-colors">
+                  <div key={idx} className="flex gap-4 p-4 bg-white  rounded-card shadow-sm border border-cream-200 items-start group hover:border-sage-300 transition-colors">
                     <div className="w-14 h-14 rounded-xl bg-cream-50 border border-cream-100 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
                       {attraction.image}
                     </div>
