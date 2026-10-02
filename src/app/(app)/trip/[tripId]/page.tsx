@@ -443,14 +443,23 @@ function TripDashboard() {
           <IconButton
             icon={<Share2 size={20} />}
             variant="ghost"
-            aria-label="Copy trip link"
+            aria-label="Share trip"
             onClick={async () => {
-              const href = typeof window !== "undefined" ? `${window.location.origin}/trip/${trip.id}` : "";
+              const url = `${window.location.origin}/trip/${trip.id}`;
               try {
-                await navigator.clipboard.writeText(href);
-                showToast("Trip link copied");
-              } catch {
-                showToast("Copy failed, but the trip is ready to share.");
+                if (navigator.share) {
+                  await navigator.share({
+                    title: trip.name,
+                    text: `View my trip to ${trip.destination}.`,
+                    url,
+                  });
+                  return;
+                }
+                await navigator.clipboard.writeText(url);
+                showToast("Trip link copied!");
+              } catch (error) {
+                if (error instanceof Error && error.name === "AbortError") return;
+                showToast("Could not share or copy trip link.");
               }
             }}
           />
@@ -461,28 +470,6 @@ function TripDashboard() {
 
         {/* Left Column - Main Content */}
         <div className="flex-1">
-          <div className="mb-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                placeholder="Replan budget (e.g. 25000)"
-                className="w-40 px-3 py-2 rounded-lg border border-cream-200"
-                onChange={() => { /* noop, use button input prompt below */ }}
-                id="replanBudgetInput"
-              />
-              <button
-                onClick={() => {
-                  const el = document.getElementById('replanBudgetInput') as HTMLInputElement | null;
-                  if (!el) return;
-                  const val = parseInt(el.value.replace(/[^0-9]/g, ''));
-                  if (!isNaN(val) && val > 0) handleReplanWithBudget(val);
-                }}
-                className="px-3 py-2 bg-sage-600 text-white rounded-lg"
-              >
-                Replan with Budget
-              </button>
-            </div>
-          </div>
           {/* Hero Card */}
           <div className={`relative overflow-hidden rounded-cardLg p-8 md:p-12 mb-8 bg-linear-to-br ${profile.heroBg} shadow-sm border border-white/20`}>
             <div className="absolute top-4 right-4 opacity-50 text-8xl pointer-events-none select-none">

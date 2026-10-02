@@ -26,11 +26,10 @@ export const getWeatherTool: ToolDefinition = {
       const forecasts = await service.getWeather({ destination, date: args.date });
 
       if (forecasts.length === 0) {
+        const error = `Could not find weather data for "${destination}".`;
         return {
-          result: {
-            success: false,
-            error: `Could not find weather data for "${destination}".`,
-          },
+          result: { success: false, error },
+          artifact: { type: "weather", destination, forecasts, summary: error },
         };
       }
 
@@ -58,12 +57,12 @@ export const getWeatherTool: ToolDefinition = {
           ...weatherResult
         }
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const details = err instanceof Error ? err.message : String(err);
+      const error = `Weather service unavailable: ${details}`;
       return {
-        result: {
-          success: false,
-          error: `Weather service unavailable: ${err.message}`,
-        },
+        result: { success: false, error },
+        artifact: { type: "weather", destination, forecasts: [], summary: error },
       };
     }
   },

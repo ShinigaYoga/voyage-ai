@@ -145,7 +145,7 @@ export interface ItineraryMessage extends MessageBase { type: "itinerary"; itine
 export interface ActivityMessage extends MessageBase { type: "activity"; activities: any[]; }
 export interface BookingMessage extends MessageBase { type: "booking"; booking: any; }
 export interface FoodMessage extends MessageBase { type: "food"; dishes: any[]; }
-export interface WeatherMessage extends MessageBase { type: "weather"; destination: string; forecasts: any[]; summary: string; }
+export interface WeatherMessage extends MessageBase { type: "weather"; destination: string; forecasts: import("./services/weather/types").WeatherForecast[]; summary: string; dayNumber?: number; affectedDayNumbers?: number[]; }
 export interface TransportComparisonMessage extends MessageBase { 
   type: "transport_comparison"; 
   comparisons: { date: string; options: any[] }[]; 

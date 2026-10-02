@@ -16,6 +16,7 @@ export type AgentResult = {
     | { type: 'restaurant'; tripId: string; restaurants: any[] }
     | { type: 'attraction'; tripId: string; attractions: any[] }
     | { type: 'booking'; tripId: string; booking: any }
+    | { type: 'weather'; destination: string; forecasts: import("@/lib/services/weather/types").WeatherForecast[]; summary: string; dayNumber?: number; affectedDayNumbers?: number[] }
     | {
         type: 'unified_transport';
         tripId: string;

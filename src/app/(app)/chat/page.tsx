@@ -400,6 +400,8 @@ function ChatPageContent() {
                 destination: artifact.destination,
                 forecasts: artifact.forecasts,
                 summary: artifact.summary,
+                dayNumber: artifact.dayNumber,
+                affectedDayNumbers: artifact.affectedDayNumbers,
               });
               setMessages((prev) => [...prev, weatherMsg]);
             }
@@ -563,12 +565,12 @@ function ChatPageContent() {
           role="alert"
           className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-xl border border-coral-200 bg-coral-50 px-4 py-3 text-sm text-coral-900"
         >
-          <span>The last message wasn't completed.</span>
+          <span>The last message wasn&apos;t completed.</span>
           <button
             type="button"
             disabled={loading}
             onClick={() => handleSend(failedRequest.text, failedRequest.attachments, failedRequest)}
-            className="shrink-0 rounded-lg bg-sage-800 px-3 py-1.5 font-bold text-white hover:bg-sage-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-800 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-sage-800 px-3 py-1.5 font-bold text-white hover:bg-sage-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-800 disabled:opacity-50"
           >
             Retry
           </button>

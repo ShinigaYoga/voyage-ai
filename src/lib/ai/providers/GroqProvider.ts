@@ -88,7 +88,7 @@ export class GroqProvider implements AIProvider {
     const completionParams: any = {
       model: this.modelName,
       messages: groqMessages,
-      max_tokens: 6000,
+      max_tokens: 2048,
       ...(this.modelName.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
       tools: groqTools.length > 0 ? groqTools : undefined,
       tool_choice: groqTools.length > 0 ? "auto" : undefined,

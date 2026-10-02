@@ -22,6 +22,7 @@ function validIsoDate(year: number, month: number, day: number): string | undefi
 
 export function parseItineraryDateRequest(input: string, today: string): ParsedItineraryDates {
   const dates: Array<{ index: number; value: string; explicitYear: boolean }> = [];
+  let explicitSingleDayRange = false;
   const add = (index: number, year: number, month: number, day: number, explicitYear: boolean) => {
     let value = validIsoDate(year, month, day);
     if (!value) return;
@@ -30,6 +31,7 @@ export function parseItineraryDateRequest(input: string, today: string): ParsedI
       if (!value) return;
     }
     dates.push({ index, value, explicitYear });
+    return value;
   };
 
   for (const match of input.matchAll(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/g)) {
@@ -45,16 +47,47 @@ export function parseItineraryDateRequest(input: string, today: string): ParsedI
     const year = match[3] ? Number(match[3]) : Number(today.slice(0, 4));
     add(match.index ?? 0, year, month, Number(match[1]), Boolean(match[3]));
   }
+
+  const rangeSeparator = "(?:to|through|until|[-–—])";
+  for (const match of input.matchAll(new RegExp(`\\b(${MONTH_PATTERN})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*${rangeSeparator}\\s*(?:(${MONTH_PATTERN})\\s*)?(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(20\\d{2}))?\\b`, "gi"))) {
+    const startIndex = match.index ?? 0;
+    const rangeStart = add(startIndex, Number(today.slice(0, 4)), MONTH_INDEX[match[1].toLowerCase()], Number(match[2]), false);
+    const endMonth = match[3] ? MONTH_INDEX[match[3].toLowerCase()] : MONTH_INDEX[match[1].toLowerCase()];
+    const endYear = match[5] ? Number(match[5]) : Number(today.slice(0, 4));
+    const endIndex = (match.index ?? 0) + match[0].lastIndexOf(match[4]);
+    const rangeEnd = add(endIndex, endYear, endMonth, Number(match[4]), Boolean(match[5]));
+    if (rangeStart && rangeStart === rangeEnd) explicitSingleDayRange = true;
+  }
+  for (const match of input.matchAll(new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*${rangeSeparator}\\s*(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH_PATTERN})(?:,?\\s+(20\\d{2}))?\\b`, "gi"))) {
+    const year = match[4] ? Number(match[4]) : Number(today.slice(0, 4));
+    const startIndex = match.index ?? 0;
+    const endIndex = (match.index ?? 0) + match[0].lastIndexOf(match[2]);
+    const month = MONTH_INDEX[match[3].toLowerCase()];
+    const rangeStart = add(startIndex, year, month, Number(match[1]), Boolean(match[4]));
+    const rangeEnd = add(endIndex, year, month, Number(match[2]), Boolean(match[4]));
+    if (rangeStart && rangeStart === rangeEnd) explicitSingleDayRange = true;
+  }
+  for (const match of input.matchAll(/\bnext\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi)) {
+    const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const current = new Date(`${today}T00:00:00Z`);
+    let offset = (weekdays.indexOf(match[1].toLowerCase()) - current.getUTCDay() + 7) % 7;
+    if (offset === 0) offset = 7;
+    current.setUTCDate(current.getUTCDate() + offset);
+    dates.push({ index: match.index ?? 0, value: current.toISOString().slice(0, 10), explicitYear: true });
+  }
   dates.sort((a, b) => a.index - b.index);
-  if (dates.length === 2 && dates[1].value < dates[0].value && !dates[1].explicitYear) {
-    const [year, month, day] = dates[1].value.split("-").map(Number);
-    dates[1].value = validIsoDate(year + 1, month - 1, day) || dates[1].value;
+  const uniqueDates = dates.filter((date, index) =>
+    index === 0 || date.value !== dates[index - 1].value
+  );
+  if (uniqueDates.length === 2 && uniqueDates[1].value < uniqueDates[0].value && !uniqueDates[1].explicitYear) {
+    const [year, month, day] = uniqueDates[1].value.split("-").map(Number);
+    uniqueDates[1].value = validIsoDate(year + 1, month - 1, day) || uniqueDates[1].value;
   }
 
-  const duration = input.match(/\b(\d{1,2})\s+days?\b/i);
+  const duration = input.match(/\b(\d{1,2})[\s-]+days?\b/i);
   const statedDays = duration ? Number(duration[1]) : undefined;
-  const startDate = dates[0]?.value;
-  const statedEndDate = dates[1]?.value;
+  const startDate = uniqueDates[0]?.value;
+  const statedEndDate = uniqueDates[1]?.value;
   if (startDate && statedEndDate) {
     const rangeDays = Math.floor(
       (new Date(`${statedEndDate}T00:00:00Z`).getTime() - new Date(`${startDate}T00:00:00Z`).getTime()) / 86400000
@@ -68,6 +101,9 @@ export function parseItineraryDateRequest(input: string, today: string): ParsedI
       };
     }
     return { startDate, endDate: statedEndDate, days: rangeDays };
+  }
+  if (startDate && explicitSingleDayRange) {
+    return { startDate, endDate: startDate, days: 1 };
   }
   if (startDate && statedDays) {
     const end = new Date(`${startDate}T00:00:00Z`);

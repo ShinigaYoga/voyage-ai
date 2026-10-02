@@ -3,7 +3,13 @@ import { Message } from "@/lib/types";
 import { Avatar } from "../ui/Avatar";
 import { MessageRenderer } from "./MessageRenderer";
 
-export function MessageBubble({ message }: { message: Message }) {
+export function MessageBubble({
+  message,
+  onReplan,
+}: {
+  message: Message;
+  onReplan?: () => void;
+}) {
   const isUser = message.role === "user";
 
   const timeString = new Date(message.createdAt).toLocaleTimeString([], {
@@ -32,7 +38,7 @@ export function MessageBubble({ message }: { message: Message }) {
               }
             `}
           >
-            <MessageRenderer message={message} />
+            <MessageRenderer message={message} onReplan={onReplan} />
           </div>
 
           <span className="text-[10px] text-ink-500 mt-2 px-1">

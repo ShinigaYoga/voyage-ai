@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Message, TextMessage, TripMessage, BudgetBreakdown } from "@/lib/types";
+import { Message, TextMessage, TripMessage, BudgetBreakdown, WeatherMessage } from "@/lib/types";
 import { Badge } from "../ui/Badge";
 import { Calendar, Users, X, Compass, AlertTriangle } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +20,7 @@ import { createBookingDraft } from "@/lib/services/booking/bookingDraftStore";
 
 import ReactMarkdown from 'react-markdown';
 import { TransportResultsCard } from "./TransportResultsCard";
+import { WeatherCard } from "@/components/trip/WeatherCard";
 
 type MarkdownBlock =
   | { type: "text"; content: string }
@@ -204,6 +205,37 @@ function TripUpdatedRenderer({ message }: { message: any }) {
         </Link>
       )}
     </Card>
+  );
+}
+
+function WeatherMessageRenderer({
+  message,
+  onReplan,
+}: {
+  message: WeatherMessage;
+  onReplan?: () => void;
+}) {
+  const firstForecast = message.forecasts[0];
+  const lastForecast = message.forecasts[message.forecasts.length - 1];
+  const title = firstForecast
+    ? `${message.dayNumber ? `Day ${message.dayNumber} — ` : ""}${new Date(`${firstForecast.date}T00:00:00`).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })}${lastForecast && lastForecast.date !== firstForecast.date
+        ? ` – ${new Date(`${lastForecast.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        : ""}`
+    : undefined;
+
+  return (
+    <div className="w-full min-w-0">
+      <WeatherCard
+        forecasts={message.forecasts}
+        compact
+        title={message.dayNumber ? title : "Weather Forecast"}
+        affectedDayNumbers={message.affectedDayNumbers}
+        onReplan={onReplan}
+      />
+    </div>
   );
 }
 
@@ -727,7 +759,13 @@ function BookingRenderer({ message }: { message: any }) {
   );
 }
 
-export function MessageRenderer({ message }: { message: Message }) {
+export function MessageRenderer({
+  message,
+  onReplan,
+}: {
+  message: Message;
+  onReplan?: () => void;
+}) {
   switch (message.type) {
     case "text":
       return <TextMessageRenderer message={message as TextMessage} />;
@@ -749,9 +787,10 @@ export function MessageRenderer({ message }: { message: Message }) {
       return <AttractionRenderer message={message} />;
     case "booking":
       return <BookingRenderer message={message} />;
+    case "weather":
+      return <WeatherMessageRenderer message={message as WeatherMessage} onReplan={onReplan} />;
     case "activity":
     case "food":
-    case "weather":
       return (
         <div className="italic text-ink-500 text-xs py-1">
           [{message.type} card placeholder]

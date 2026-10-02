@@ -16,4 +16,12 @@ export interface WeatherProvider {
 export interface GetWeatherParams {
   destination?: string;
   date?: string;
+  coordinates?: { lat: number; lon: number };
+}
+
+export interface GetWeatherRangeParams {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  coordinates?: { lat: number; lon: number };
 }

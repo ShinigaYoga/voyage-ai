@@ -3,6 +3,7 @@ import { resolveCoords } from "@/lib/services/weather";
 import { DestinationResearchService } from "@/lib/services/destination/DestinationResearchService";
 import { generateItinerary } from "@/lib/itinerary/generator";
 import { calculateBudgetBreakdown, generateBudgetRecommendations } from "@/lib/budget/engine";
+import { parseItineraryDateRequest } from "./itineraryDates";
 
 export const createTripTool: ToolDefinition = {
   name: 'createTrip',
@@ -107,7 +108,8 @@ export const createTripTool: ToolDefinition = {
     }
 
     // Auto-generate itinerary immediately if profile is ready
-    if (newTrip.destinationProfile && newTrip.profileStatus === 'ready') {
+    const confirmedDates = parseItineraryDateRequest(datesStr, new Date().toISOString().slice(0, 10));
+    if (newTrip.destinationProfile && newTrip.profileStatus === 'ready' && confirmedDates.startDate && confirmedDates.endDate) {
       try {
         const days = generateItinerary(newTrip, newTrip.destinationProfile);
         const itinerary = { days };

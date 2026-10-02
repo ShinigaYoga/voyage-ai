@@ -6,9 +6,20 @@ interface WeatherCardProps {
   loading?: boolean;
   error?: string | null;
   compact?: boolean;
+  title?: string;
+  affectedDayNumbers?: number[];
+  onReplan?: () => void;
 }
 
-export function WeatherCard({ forecasts, loading, error, compact = false }: WeatherCardProps) {
+export function WeatherCard({
+  forecasts,
+  loading,
+  error,
+  compact = false,
+  title,
+  affectedDayNumbers = [],
+  onReplan,
+}: WeatherCardProps) {
   if (loading) {
     return (
       <div className="bg-sky-50 rounded-card p-5 border border-sky-100 animate-pulse">
@@ -23,24 +34,81 @@ export function WeatherCard({ forecasts, loading, error, compact = false }: Weat
       <div className="bg-sky-50 rounded-card p-5 border border-sky-100 flex items-center gap-3">
         <span className="text-2xl">🌥️</span>
         <div>
-          <div className="text-sm font-medium text-sky-800">Weather</div>
-          <div className="text-xs text-sky-600 mt-0.5">{error || "Unavailable"}</div>
+          <div className="text-sm font-medium text-sky-800">Weather unavailable</div>
+          {error && <div className="text-xs text-sky-600 mt-0.5">{error}</div>}
         </div>
       </div>
     );
   }
 
   if (compact) {
-    // Compact: just show today
-    const today = forecasts[0];
+    const affectedForecasts = forecasts.filter((_, index) => affectedDayNumbers.includes(index + 1));
+    const severeWeather = affectedForecasts.some(forecast =>
+      forecast.condition === "storm" || forecast.condition === "snow"
+    );
+    const affectedDateLabels = affectedForecasts.map(forecast =>
+      new Date(`${forecast.date}T00:00:00`).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    );
+    const affectedDates = affectedDateLabels.length === 1
+      ? affectedDateLabels[0]
+      : `${affectedDateLabels.slice(0, -1).join(", ")} and ${affectedDateLabels[affectedDateLabels.length - 1]}`;
+
     return (
-      <div className="bg-sky-50 rounded-card p-5 border border-sky-100 flex items-center justify-between">
-        <div>
-          <div className="text-sm font-medium text-sky-800">Today's Weather</div>
-          <div className="text-2xl font-display font-bold text-sky-900 mt-1">{today.tempMax}°C</div>
-          <div className="text-xs text-sky-600 mt-0.5">{today.description}</div>
-        </div>
-        <div className="text-4xl">{today.icon}</div>
+      <div className="w-full space-y-3">
+        <section className="w-full rounded-card border border-sage-200 bg-white p-4 shadow-soft">
+          <h3 className="text-sm font-bold text-ink-900 mb-1 flex items-center gap-2">
+            <span>🌤️</span>{title || "Weather during your trip"}
+          </h3>
+          <p className="mb-3 text-xs text-ink-500">
+            {forecasts.length > 1 && `${new Date(`${forecasts[0].date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(`${forecasts[forecasts.length - 1].date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Daily weather forecast">
+            {forecasts.map(forecast => {
+              const dateLabel = new Date(`${forecast.date}T00:00:00`).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              });
+              return (
+                <div key={forecast.date} className="min-w-28 shrink-0 rounded-xl border border-sage-100 bg-sage-50/60 px-3 py-3">
+                  <div className="text-xs font-semibold text-ink-700">{dateLabel}</div>
+                  <div className="my-2 text-2xl" aria-hidden="true">{forecast.icon}</div>
+                  <div className="text-xs font-medium capitalize text-ink-800">
+                    {forecast.description || forecast.condition}
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-ink-900">
+                    {forecast.tempMin}° – {forecast.tempMax}°C
+                  </div>
+                  <div className="mt-1 text-[11px] text-ink-600">
+                    Rain: {forecast.precipitationMm} mm
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        {affectedForecasts.length > 0 && (
+          <section className="rounded-card border border-amber-200 bg-amber-50 p-3" aria-live="polite">
+            <h4 className="text-sm font-bold text-amber-900">
+              {severeWeather ? "⛈️ Severe weather" : "🌧️ Rain"} expected on {affectedDates}
+            </h4>
+            <p className="mt-1 text-xs text-amber-800">
+              Some outdoor activities may be affected.
+            </p>
+            {onReplan && (
+              <button
+                type="button"
+                onClick={onReplan}
+                className="mt-3 rounded-pill bg-sage-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-sage-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage-700"
+              >
+                Replan rainy days
+              </button>
+            )}
+          </section>
+        )}
       </div>
     );
   }

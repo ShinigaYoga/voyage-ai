@@ -40,7 +40,11 @@ export function MessageList({ messages, onQuickPrompt, loading, loadingStatus, c
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble
+          key={msg.id}
+          message={msg}
+          onReplan={msg.type === "weather" && onQuickPrompt ? () => onQuickPrompt("Yes, replan it.") : undefined}
+        />
       ))}
       {loading && <LoadingBubble status={loadingStatus} />}
       <div ref={bottomRef} />
